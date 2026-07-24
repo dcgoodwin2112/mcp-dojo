@@ -66,6 +66,9 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
   tools, write token 38; permission denial = HTTP 403 + JSON-RPC `-32002`
   (never an `isError` tool result); responses are SSE `data:` lines; session
   via `Mcp-Session-Id` header; access tokens live 300s (proxy re-mints at a
-  30s margin). DKAN site + consumers setup: plan's provisioning checklist.
+  30s margin); `initialize` returns an `instructions` string; completion
+  covers prompt args and the dataset/dictionary resource templates
+  (ref/resource on `{id}`, 13 UUIDs on empty input) — distribution and
+  datastore-schema templates have no completers (empty result, not an error). DKAN site + consumers setup: plan's provisioning checklist.
 - **Commits**: concise, no hype; push to `origin main`
   (github.com/dcgoodwin2112/mcp-inspector).

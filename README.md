@@ -35,9 +35,12 @@ npm run dev
 
 ## Using it
 
-- **Live**: pick a persona, Connect. Click a tool in the left rail for a
-  schema-generated form; click a resource to Preview (read without attaching)
-  and Attach to context. The chat bar drives agent mode ("pause before each model call"
+- **Live**: pick a persona, Connect. The server's `initialize` instructions
+  are shown on the handshake card and composed into the agent's system prompt
+  (visible as a labeled section in `⊞ Context`). Click a tool in the left rail
+  for a schema-generated form; click a resource to Preview (read without
+  attaching) and Attach to context — template `{vars}` get value typeahead via
+  MCP completion/complete (empty input lists all values). The chat bar drives agent mode ("pause before each model call"
   gates each step of the loop); model responses render as markdown. Prompts are slash
   commands in the chat bar: `/expl` → Tab completes, type args inline (value
   typeahead via MCP completion/complete, Tab accepts), first Enter expands &
