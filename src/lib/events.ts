@@ -43,6 +43,9 @@ export const McpInitializedSchema = EventBase.extend({
   serverInfo: z.object({ name: z.string(), version: z.string() }),
   // MCP capabilities are object-shaped; stored verbatim.
   capabilities: z.record(z.string(), z.unknown()),
+  // Optional server usage guidance from the initialize result — the host is
+  // expected to surface it and fold it into the model's system context.
+  instructions: z.string().optional(),
 });
 
 export const SessionEndedSchema = EventBase.extend({

@@ -83,14 +83,18 @@ export class AgentLoop {
     });
   }
 
-  /** The exact system prompt the next model call will send (base + attached
-   *  resources) — the Context Inspector reads this. */
+  /** The exact system prompt the next model call will send (base + server
+   *  instructions from initialize + attached resources) — the Context
+   *  Inspector shows each part. */
   get system(): string {
+    const server = this.session.serverInstructions
+      ? `\n\n=== Server instructions (from initialize) ===\n${this.session.serverInstructions}`
+      : "";
     const attachments = this.session.attached
       .filter((a) => a.text)
       .map((a) => `\n\n=== Attached resource: ${a.uri} (${a.name}) ===\n${a.text}`)
       .join("");
-    return this.systemBase + attachments;
+    return this.systemBase + server + attachments;
   }
 
   async send(

@@ -52,6 +52,24 @@ describe("EventLogSchema invariants", () => {
     expect(JSON.stringify(r.error?.issues)).toContain("gapless");
   });
 
+  it("accepts mcp.initialized with and without server instructions", () => {
+    const init = {
+      ...envelope(2, 10),
+      actor: "server" as const,
+      type: "mcp.initialized",
+      requestId: "r-1",
+      serverInfo: { name: "s", version: "1" },
+      capabilities: {},
+    };
+    // Older recordings have no instructions field — must still parse.
+    expect(EventLogSchema.safeParse(log([started, init])).success).toBe(true);
+    expect(
+      EventLogSchema.safeParse(
+        log([started, { ...init, instructions: "This server exposes a DKAN open data catalog" }]),
+      ).success,
+    ).toBe(true);
+  });
+
   it("rejects decreasing t", () => {
     const r = EventLogSchema.safeParse(
       log([

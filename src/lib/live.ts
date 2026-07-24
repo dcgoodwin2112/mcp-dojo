@@ -62,6 +62,11 @@ export interface ResourceContent {
   text?: string;
 }
 
+/** completion/complete target: a prompt argument or a resource-template variable. */
+export type CompletionRef =
+  | { type: "ref/prompt"; name: string }
+  | { type: "ref/resource"; uri: string };
+
 export interface ToolOutcome {
   isError: boolean;
   latencyMs?: number;
@@ -80,6 +85,10 @@ export class LiveSession {
   disabledTools = new Set<string>();
   /** Host-side description rewrites — the sandbox for "descriptions are prompts". */
   descriptionOverrides = new Map<string, string>();
+  /** Server usage guidance from the initialize result — folded into the
+   *  agent's system prompt (AgentLoop.system) and shown in the Context
+   *  Inspector as a distinct read-only section. */
+  serverInstructions: string | undefined;
 
   /** The tool definitions the model actually receives. */
   get effectiveTools(): CapabilityItem[] {
@@ -165,6 +174,7 @@ export class LiveSession {
       profile.personas.find((p) => p.key === personaKey)?.label ?? personaKey;
     this.persona = personaKey;
     this.mcpSessionId = undefined;
+    this.serverInstructions = undefined;
 
     this.store.append("user", {
       type: "auth.persona.selected",
@@ -179,12 +189,17 @@ export class LiveSession {
     if (init.ok && result) {
       this.mcpSessionId = init.mcpSessionId;
       const info = result.serverInfo as { name: string; version: string };
+      this.serverInstructions =
+        typeof result.instructions === "string" && result.instructions.trim() !== ""
+          ? result.instructions
+          : undefined;
       this.store.append("server", {
         type: "mcp.initialized",
         requestId: String(init.requestFrame?.id ?? ""),
         mcpSessionId: init.mcpSessionId,
         serverInfo: { name: info.name, version: info.version },
         capabilities: (result.capabilities as Record<string, unknown>) ?? {},
+        instructions: this.serverInstructions,
       });
     } else {
       return; // error event already appended by call()
@@ -281,12 +296,13 @@ export class LiveSession {
   }
 
   /**
-   * MCP completion/complete for a prompt argument (e.g. dataset_id).
+   * MCP completion/complete for a prompt argument (e.g. dataset_id) or a
+   * resource-template variable (e.g. {id} in dkan://dataset/{id}).
    * Logged like any other exchange — completions are protocol calls too and
    * show up in the raw-frames drawer.
    */
-  async completeArgument(promptName: string, argName: string, value: string): Promise<string[]> {
-    const res = await this.call({ kind: "completion/complete", promptName, argName, value });
+  async completeArgument(ref: CompletionRef, argName: string, value: string): Promise<string[]> {
+    const res = await this.call({ kind: "completion/complete", ref, argName, value });
     const result = rpcResult(res?.responseFrame);
     if (!res?.ok || !result) return [];
     const completion = result.completion as { values?: string[] } | undefined;

@@ -22,7 +22,12 @@ type Op =
   | { kind: "tools/call"; name: string; args: Record<string, unknown> }
   | { kind: "resources/read"; uri: string }
   | { kind: "prompts/get"; name: string; args: Record<string, string> }
-  | { kind: "completion/complete"; promptName: string; argName: string; value: string };
+  | {
+      kind: "completion/complete";
+      ref: { type: "ref/prompt"; name: string } | { type: "ref/resource"; uri: string };
+      argName: string;
+      value: string;
+    };
 
 interface CachedToken {
   accessToken: string;
@@ -101,7 +106,7 @@ function buildFrame(op: Op, id: string): Record<string, unknown> {
         id,
         method: "completion/complete",
         params: {
-          ref: { type: "ref/prompt", name: op.promptName },
+          ref: op.ref,
           argument: { name: op.argName, value: op.value },
         },
       };

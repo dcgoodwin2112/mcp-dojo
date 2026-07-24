@@ -308,6 +308,19 @@ export function ContextInspector({
               </pre>
             </div>
           )}
+          {session.serverInstructions && (
+            <div className="mt-1.5">
+              <span
+                className="text-[10px] font-semibold uppercase text-orange-700 dark:text-orange-400"
+                title="Sent by the server in the initialize result — read-only; the host composes it into the system prompt"
+              >
+                server instructions · from initialize
+              </span>
+              <pre className="whitespace-pre-wrap break-words rounded border-l-2 border-orange-400 bg-orange-50/50 p-1.5 font-mono text-[11px] leading-relaxed dark:bg-orange-950/20">
+                {session.serverInstructions}
+              </pre>
+            </div>
+          )}
           {attached
             .filter((a) => a.text)
             .map((a) => (

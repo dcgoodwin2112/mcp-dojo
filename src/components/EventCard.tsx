@@ -213,6 +213,16 @@ export function EventCard({
           {event.mcpSessionId && (
             <span className="ml-2 font-mono text-xs text-zinc-500 dark:text-zinc-400">{event.mcpSessionId}</span>
           )}
+          {event.instructions && (
+            <details className="mt-1">
+              <summary className="cursor-pointer select-none text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300">
+                instructions — server guidance, folded into the model&apos;s system prompt
+              </summary>
+              <pre className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded bg-zinc-100 p-2 font-mono text-xs leading-relaxed dark:bg-zinc-900">
+                {event.instructions}
+              </pre>
+            </details>
+          )}
           <Raw summary="capabilities" data={event.capabilities} />
         </Card>
       );

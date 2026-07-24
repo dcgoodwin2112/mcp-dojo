@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { CapabilityItem } from "@/lib/events";
 import type { ResourceContent } from "@/lib/live";
 
@@ -43,6 +43,7 @@ export function ResourceBrowser({
   onPreview,
   onAttach,
   onClose,
+  onComplete,
 }: {
   resource: CapabilityItem;
   busy: boolean;
@@ -50,6 +51,8 @@ export function ResourceBrowser({
   onPreview: (uri: string) => Promise<{ contents: ResourceContent[] } | { error: string }>;
   onAttach: (uri: string, name: string, previewed: ResourceContent[] | null) => void;
   onClose: () => void;
+  /** MCP completion/complete for a template variable (ref/resource). */
+  onComplete?: (argName: string, value: string) => Promise<string[]>;
 }) {
   const vars = useMemo(
     () => [...(resource.uriTemplate ?? "").matchAll(/\{(\w+)\}/g)].map((m) => m[1]),
@@ -59,6 +62,49 @@ export function ResourceBrowser({
   const [preview, setPreview] = useState<{ uri: string; blocks: ResourceContent[] } | null>(null);
   const [previewError, setPreviewError] = useState<{ uri: string; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  /** Value typeahead for template {vars} via MCP completion/complete. */
+  const [sugVar, setSugVar] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [highlight, setHighlight] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function fetchSuggestions(varName: string, value: string) {
+    if (!onComplete) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    // Empty input completes immediately (the server suggests all values).
+    debounceRef.current = setTimeout(
+      async () => {
+        const vals = await onComplete(varName, value);
+        const useful = vals.length === 1 && vals[0] === value ? [] : vals;
+        setSuggestions(useful);
+        setHighlight(0);
+      },
+      value === "" ? 0 : 300,
+    );
+  }
+
+  function acceptSuggestion(varName: string, v: string) {
+    setValues((s) => ({ ...s, [varName]: v }));
+    setSuggestions([]);
+    setSugVar(null);
+  }
+
+  function onVarKeyDown(e: React.KeyboardEvent, varName: string) {
+    if (sugVar !== varName || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => (h + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => (h - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === "Tab" || e.key === "Enter") {
+      e.preventDefault();
+      acceptSuggestion(varName, suggestions[Math.min(highlight, suggestions.length - 1)]);
+    } else if (e.key === "Escape") {
+      setSuggestions([]);
+      setSugVar(null);
+    }
+  }
 
   const uri = resource.isTemplate
     ? vars.reduce(
@@ -111,12 +157,50 @@ export function ResourceBrowser({
           {vars.map((v) => (
             <label key={v} className="block text-xs">
               <span className="font-mono">{`{${v}}`}</span>
-              <input
-                type="text"
-                value={values[v] ?? ""}
-                onChange={(e) => setValues((s) => ({ ...s, [v]: e.target.value }))}
-                className="mt-1 w-full rounded border border-zinc-300 bg-white p-1.5 font-mono dark:border-zinc-700 dark:bg-zinc-900 placeholder:text-zinc-500 dark:placeholder:text-zinc-400"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={values[v] ?? ""}
+                  aria-label={`Value for template variable ${v}`}
+                  autoComplete="off"
+                  onChange={(e) => {
+                    setValues((s) => ({ ...s, [v]: e.target.value }));
+                    setSugVar(v);
+                    fetchSuggestions(v, e.target.value);
+                  }}
+                  onFocus={() => {
+                    setSugVar(v);
+                    fetchSuggestions(v, values[v] ?? "");
+                  }}
+                  onBlur={() => {
+                    // mousedown on a suggestion fires before blur, so accepts win.
+                    if (debounceRef.current) clearTimeout(debounceRef.current);
+                    setSuggestions([]);
+                    setSugVar(null);
+                  }}
+                  onKeyDown={(e) => onVarKeyDown(e, v)}
+                  className="mt-1 w-full rounded border border-zinc-300 bg-white p-1.5 font-mono dark:border-zinc-700 dark:bg-zinc-900 placeholder:text-zinc-500 dark:placeholder:text-zinc-400"
+                />
+                {sugVar === v && suggestions.length > 0 && (
+                  <ul className="absolute left-0 top-full z-20 mt-0.5 max-h-48 w-full overflow-y-auto rounded-md border border-indigo-300 bg-white shadow-lg dark:border-indigo-800 dark:bg-zinc-900">
+                    {suggestions.map((s, i) => (
+                      <li key={s}>
+                        <button
+                          type="button"
+                          onMouseDown={() => acceptSuggestion(v, s)}
+                          className={`w-full truncate px-2 py-1 text-left font-mono text-xs ${
+                            i === highlight
+                              ? "bg-indigo-100 dark:bg-indigo-950/60"
+                              : "hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </label>
           ))}
         </div>

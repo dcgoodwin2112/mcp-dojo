@@ -27,7 +27,7 @@ export function specNote(event: InspectorEvent): SpecNote | undefined {
       };
     case "mcp.initialized":
       return {
-        text: "initialize is MCP's opening handshake: client and server exchange protocol versions and declare capabilities, so each side knows what the other supports.",
+        text: "initialize is MCP's opening handshake: client and server exchange protocol versions and declare capabilities, so each side knows what the other supports. The server may also send instructions — usage guidance the host folds into the model's system prompt.",
         href: `${SPEC}/basic/lifecycle`,
       };
     case "auth.persona.selected":

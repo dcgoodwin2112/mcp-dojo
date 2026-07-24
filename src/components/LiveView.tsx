@@ -267,7 +267,11 @@ export function LiveView({
                 void run("agent", () => loopRef.current!.send(text, "prompt_invocation"))
               }
               completeArg={(promptName, argName, value) =>
-                sessionRef.current!.completeArgument(promptName, argName, value)
+                sessionRef.current!.completeArgument(
+                  { type: "ref/prompt", name: promptName },
+                  argName,
+                  value,
+                )
               }
             />
             <details className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -342,6 +346,16 @@ export function LiveView({
                   })
                 }
                 onClose={() => setSelection(null)}
+                onComplete={
+                  selection.item.uriTemplate
+                    ? (argName, value) =>
+                        sessionRef.current!.completeArgument(
+                          { type: "ref/resource", uri: selection.item.uriTemplate! },
+                          argName,
+                          value,
+                        )
+                    : undefined
+                }
               />
             )}
             {echo && (
