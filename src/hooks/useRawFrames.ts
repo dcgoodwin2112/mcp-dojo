@@ -2,19 +2,27 @@
 
 import { useEffect, useState } from "react";
 
-/** Raw-frames toggle, shared via localStorage across live and replay views. */
-export function useRawFrames(): [boolean, () => void] {
-  const [on, setOn] = useState(false);
+/**
+ * Radio-style view selection — at most one of Raw frames, Context, Diagram
+ * is active. Persisted and shared across live and replay (replay ignores
+ * "context", which only exists in live mode).
+ */
+export type ActiveView = "frames" | "context" | "diagram" | null;
+
+const KEY = "inspector.view";
+
+export function useActiveView(): [ActiveView, (v: ActiveView) => void] {
+  const [view, setViewState] = useState<ActiveView>(null);
   useEffect(() => {
-    setOn(localStorage.getItem("inspector.rawFrames") === "1");
+    const v = localStorage.getItem(KEY);
+    if (v === "frames" || v === "context" || v === "diagram") setViewState(v);
   }, []);
-  function toggle() {
-    setOn((v) => {
-      localStorage.setItem("inspector.rawFrames", v ? "0" : "1");
-      return !v;
-    });
+  function setView(v: ActiveView) {
+    setViewState(v);
+    if (v === null) localStorage.removeItem(KEY);
+    else localStorage.setItem(KEY, v);
   }
-  return [on, toggle];
+  return [view, setView];
 }
 
 export function isRpcEvent(e: { type: string }): boolean {

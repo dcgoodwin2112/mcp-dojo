@@ -5,7 +5,7 @@ import type { EventLog } from "@/lib/events";
 import { RECORDINGS } from "@/lib/fixtures";
 import { useDrawerResize } from "@/hooks/useDrawerResize";
 import { useReplay } from "@/hooks/useReplay";
-import { isRpcEvent, useRawFrames } from "@/hooks/useRawFrames";
+import { isRpcEvent, useActiveView } from "@/hooks/useRawFrames";
 import { FramesDrawer } from "./FramesDrawer";
 import { ReplayControls } from "./ReplayControls";
 import { SequenceDiagram } from "./SequenceDiagram";
@@ -24,13 +24,12 @@ export function ReplayView({
       ? propLog
       : (RECORDINGS.find((r) => r.id === selected)?.log ?? propLog);
   const { controller, state } = useReplay(log);
-  const [rawFrames, toggleRawFrames] = useRawFrames();
-  const [diagram, setDiagram] = useState(false);
+  const [view, setView] = useActiveView();
   const drawer = useDrawerResize();
 
   const visible = useMemo(() => log.events.slice(0, state.cursor), [log, state.cursor]);
   const timelineEvents = useMemo(() => visible.filter((e) => !isRpcEvent(e)), [visible]);
-  const skipEvent = rawFrames ? undefined : isRpcEvent;
+  const skipEvent = view === "frames" ? undefined : isRpcEvent;
   /** Bumped on explicit navigation so the timeline follows the seek. */
   const [jumpNonce, setJumpNonce] = useState(0);
   const onNavigate = () => setJumpNonce((n) => n + 1);
@@ -90,13 +89,14 @@ export function ReplayView({
         <div className="flex-1">
           <ReplayControls controller={controller} state={state} skipEvent={skipEvent} onNavigate={onNavigate} />
         </div>
+        {/* Radio group: at most one of diagram / frames active. */}
         <button
           type="button"
-          onClick={() => setDiagram((v) => !v)}
-          aria-pressed={diagram}
+          onClick={() => setView(view === "diagram" ? null : "diagram")}
+          aria-pressed={view === "diagram"}
           title="Render the log as a sequence diagram — who talks to whom"
           className={`rounded-md border px-2.5 py-1 font-mono text-xs ${
-            diagram
+            view === "diagram"
               ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300"
               : "border-zinc-300 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
           }`}
@@ -105,11 +105,11 @@ export function ReplayView({
         </button>
         <button
           type="button"
-          onClick={toggleRawFrames}
-          aria-pressed={rawFrames}
+          onClick={() => setView(view === "frames" ? null : "frames")}
+          aria-pressed={view === "frames"}
           title="Show raw JSON-RPC frames"
           className={`rounded-md border px-2.5 py-1 font-mono text-xs ${
-            rawFrames
+            view === "frames"
               ? "border-cyan-500 bg-cyan-50 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300"
               : "border-zinc-300 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
           }`}
@@ -119,7 +119,7 @@ export function ReplayView({
       </div>
       )}
       <div className={`min-h-0 flex-1 pt-3 ${present ? "mx-auto w-full max-w-4xl" : ""}`}>
-        {diagram ? (
+        {view === "diagram" ? (
           <SequenceDiagram events={timelineEvents} />
         ) : (
           <Timeline
@@ -130,7 +130,7 @@ export function ReplayView({
           />
         )}
       </div>
-      {rawFrames && (
+      {view === "frames" && (
         <>
           <div
             onPointerDown={drawer.startDrag}

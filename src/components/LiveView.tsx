@@ -8,7 +8,7 @@ import { LiveSession } from "@/lib/live";
 import { AgentLoop } from "@/lib/agent";
 import { useDrawerResize } from "@/hooks/useDrawerResize";
 import { useEventLog } from "@/hooks/useEventLog";
-import { isRpcEvent, useRawFrames } from "@/hooks/useRawFrames";
+import { isRpcEvent, useActiveView } from "@/hooks/useRawFrames";
 import { AgentChat } from "./AgentChat";
 import { ContextInspector } from "./ContextInspector";
 import { FramesDrawer } from "./FramesDrawer";
@@ -65,9 +65,7 @@ export function LiveView({
   const [slashPrefill, setSlashPrefill] = useState<{ text: string; nonce: number } | null>(null);
   const [forceName, setForceName] = useState("");
   const [agentWaiting, setAgentWaiting] = useState(false);
-  const [rawFrames, toggleRawFrames] = useRawFrames();
-  const [contextOpen, setContextOpen] = useState(false);
-  const [diagram, setDiagram] = useState(false);
+  const [view, setView] = useActiveView();
   const [railWidth, setRailWidth] = useState(420);
   /** Stacked-layout rail height in px; null = the 50% default. */
   const [railHeight, setRailHeight] = useState<number | null>(null);
@@ -402,16 +400,14 @@ export function LiveView({
       <section className="flex min-h-0 min-w-0 flex-1 flex-col border-zinc-200 py-3 dark:border-zinc-800 max-lg:border-t lg:pl-3">
         <div className={`mb-2 flex shrink-0 items-center gap-2 ${present ? "hidden" : ""}`}>
           <h2 className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">Timeline</h2>
+          {/* Radio group: at most one of frames / context / diagram active. */}
           <button
             type="button"
-            onClick={() => {
-              setContextOpen(false);
-              toggleRawFrames();
-            }}
-            aria-pressed={rawFrames}
+            onClick={() => setView(view === "frames" ? null : "frames")}
+            aria-pressed={view === "frames"}
             title="Show raw JSON-RPC frames"
             className={`rounded-md border px-2 py-0.5 font-mono text-xs ${
-              rawFrames
+              view === "frames"
                 ? "border-cyan-500 bg-cyan-50 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300"
                 : "border-zinc-300 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
@@ -420,16 +416,11 @@ export function LiveView({
           </button>
           <button
             type="button"
-            onClick={() => {
-              setContextOpen((v) => {
-                if (!v && rawFrames) toggleRawFrames();
-                return !v;
-              });
-            }}
-            aria-pressed={contextOpen}
+            onClick={() => setView(view === "context" ? null : "context")}
+            aria-pressed={view === "context"}
             title="What the next model call will send"
             className={`rounded-md border px-2 py-0.5 font-mono text-xs ${
-              contextOpen
+              view === "context"
                 ? "border-fuchsia-500 bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300"
                 : "border-zinc-300 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
@@ -438,11 +429,11 @@ export function LiveView({
           </button>
           <button
             type="button"
-            onClick={() => setDiagram((v) => !v)}
-            aria-pressed={diagram}
+            onClick={() => setView(view === "diagram" ? null : "diagram")}
+            aria-pressed={view === "diagram"}
             title="Render the log as a sequence diagram — who talks to whom"
             className={`rounded-md border px-2 py-0.5 font-mono text-xs ${
-              diagram
+              view === "diagram"
                 ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300"
                 : "border-zinc-300 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
@@ -479,7 +470,7 @@ export function LiveView({
           )}
         </div>
         <div className="min-h-0 flex-1">
-          {diagram ? (
+          {view === "diagram" ? (
             <SequenceDiagram events={timelineEvents} />
           ) : (
             <Timeline
@@ -488,7 +479,7 @@ export function LiveView({
             />
           )}
         </div>
-        {(contextOpen || rawFrames) && (
+        {(view === "context" || view === "frames") && (
           <>
             <div
               onPointerDown={drawer.startDrag}
@@ -501,7 +492,7 @@ export function LiveView({
               }`}
             />
             <div style={{ height: drawer.height }} className="shrink-0 pt-1">
-              {contextOpen ? (
+              {view === "context" ? (
                 <ContextInspector
                   loop={loopRef.current!}
                   session={sessionRef.current!}
