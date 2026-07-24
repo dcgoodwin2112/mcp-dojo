@@ -94,7 +94,7 @@ export function SequenceDiagram({ events }: { events: InspectorEvent[] }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Lane headers — same actors as the timeline badges. */}
-      <div className="relative z-10 flex shrink-0 border-b border-zinc-200 pb-1.5 dark:border-zinc-800">
+      <div className="relative z-10 flex shrink-0 border-b border-zinc-200 pb-1.5 pt-2 dark:border-zinc-800">
         {LANES.map((lane) => {
           const s = ACTOR_STYLES[lane];
           return (
