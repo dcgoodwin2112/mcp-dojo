@@ -69,8 +69,14 @@ export function ReplayView({
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${drawer.dragging ? "select-none" : ""}`}>
       {present ? (
-        <div className="fixed bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full border border-zinc-300 bg-white/85 px-4 py-2 opacity-60 shadow-lg backdrop-blur transition-opacity hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900/85">
-          <ReplayControls controller={controller} state={state} skipEvent={skipEvent} onNavigate={onNavigate} />
+        <div className="fixed bottom-4 left-1/2 z-20 max-w-[95vw] -translate-x-1/2 overflow-x-auto rounded-full border border-zinc-300 bg-white/85 px-4 py-2 opacity-60 shadow-lg backdrop-blur transition-opacity hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900/85">
+          <ReplayControls
+            controller={controller}
+            state={state}
+            skipEvent={skipEvent}
+            onNavigate={onNavigate}
+            nowrap
+          />
         </div>
       ) : (
       <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-zinc-200 py-2.5 dark:border-zinc-800">

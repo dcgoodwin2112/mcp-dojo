@@ -31,15 +31,20 @@ export function ReplayControls({
   state,
   skipEvent,
   onNavigate,
+  nowrap = false,
 }: {
   controller: ReplayController;
   state: ReplayState;
   skipEvent?: (e: import("@/lib/events").InspectorEvent) => boolean;
   /** Called after explicit seeks/steps so the timeline can follow. */
   onNavigate?: () => void;
+  /** Single-row layout for the presentation pill — wrapping breaks its shape. */
+  nowrap?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div
+      className={`flex items-center gap-2 ${nowrap ? "flex-nowrap whitespace-nowrap" : "flex-wrap"}`}
+    >
       <Btn
         onClick={() => {
           controller.restart();
