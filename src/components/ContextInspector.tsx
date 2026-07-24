@@ -328,7 +328,6 @@ export function ContextInspector({
         <Section
           title={`Conversation (${messages.length} message${messages.length === 1 ? "" : "s"})`}
           size={tok(messagesChars)}
-          open={messages.length > 0}
           action={
             messages.length > 0 ? (
               <SmallBtn onClick={() => loop.clearConversation()} disabled={busy} tone="danger">
