@@ -29,8 +29,11 @@ function Arrow({ row }: { row: Extract<DiagramRow, { kind: "arrow" }> }) {
         className={`absolute top-4 ${line} ${row.dashed ? "border-t border-dashed" : "border-t-2"}`}
         style={{ left: `${left}%`, width: `${width}%` }}
       />
+      {/* -50% centers the box on the line's top edge; +1.5px compensates for
+          the glyph ink sitting high in its em box and the border's downward
+          growth, so the tip lands on the line's visual center. */}
       <span
-        className={`absolute top-4 -translate-y-1/2 text-[9px] ${color}`}
+        className={`absolute top-4 translate-y-[calc(-50%+1.5px)] text-[9px] leading-none ${color}`}
         style={rightward ? { left: `calc(${to}% - 7px)` } : { left: `${to}%` }}
       >
         {rightward ? "▶" : "◀"}
