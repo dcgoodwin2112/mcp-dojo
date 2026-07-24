@@ -107,27 +107,31 @@ export function SequenceDiagram({ events }: { events: InspectorEvent[] }) {
           );
         })}
       </div>
-      <div ref={scrollRef} onScroll={onScroll} className="relative min-h-0 flex-1 overflow-y-auto">
-        {/* Lifelines behind the rows. */}
-        <div className="pointer-events-none absolute inset-0">
-          {LANES.map((lane) => (
-            <div
-              key={lane}
-              className="absolute bottom-0 top-0 border-l border-dashed border-zinc-200 dark:border-zinc-800"
-              style={{ left: `${center(lane)}%` }}
-            />
-          ))}
-        </div>
-        <div role="list" aria-label="Sequence diagram" className="relative py-2">
-          {rows.map((row) =>
-            row.kind === "arrow" ? (
-              <Arrow key={row.id} row={row} />
-            ) : row.kind === "note" ? (
-              <Note key={row.id} row={row} />
-            ) : (
-              <Banner key={row.id} row={row} />
-            ),
-          )}
+      <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto">
+        {/* Inner wrapper spans the full content height, so the lifelines do
+            too — anchored to the scroll container they would stop at one
+            viewport-height and vanish once the log outgrows it. */}
+        <div className="relative">
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            {LANES.map((lane) => (
+              <div
+                key={lane}
+                className="absolute bottom-0 top-0 border-l border-dashed border-zinc-200 dark:border-zinc-800"
+                style={{ left: `${center(lane)}%` }}
+              />
+            ))}
+          </div>
+          <div role="list" aria-label="Sequence diagram" className="relative py-2">
+            {rows.map((row) =>
+              row.kind === "arrow" ? (
+                <Arrow key={row.id} row={row} />
+              ) : row.kind === "note" ? (
+                <Note key={row.id} row={row} />
+              ) : (
+                <Banner key={row.id} row={row} />
+              ),
+            )}
+          </div>
         </div>
       </div>
     </div>
