@@ -37,8 +37,8 @@ npm run dev
 
 - **Live**: pick a persona, Connect. Click a tool in the left rail for a
   schema-generated form; click a resource to Preview (read without attaching)
-  and Attach to context. The chat bar drives agent mode ("step between hops"
-  gates each hop); model responses render as markdown. Prompts are slash
+  and Attach to context. The chat bar drives agent mode ("pause before each model call"
+  gates each step of the loop); model responses render as markdown. Prompts are slash
   commands in the chat bar: `/expl` → Tab completes, type args inline (value
   typeahead via MCP completion/complete, Tab accepts), first Enter expands &
   previews, second Enter sends (Esc cancels). Switching personas appends to
@@ -49,8 +49,8 @@ npm run dev
 - **`⇄ Diagram`**: renders the same log as a sequence diagram — swimlanes for
   user/model/app/server (matching the actor badges), request/response arrow
   pairs, errors in red. Available in live and replay.
-- **`{ } Raw frames`**: JSON-RPC exchanges paired by request id, hidden from
-  the main timeline.
+- **`{ } Raw JSON-RPC`**: the wire-level exchanges paired by request id,
+  hidden from the main timeline.
 - **Learning aids**: a collapsible legend in the rail (primitives + who
   controls each, actor badges); every timeline card has an "ⓘ what is this?"
   note linking into the MCP spec (works in replay too); tool-result cards tab

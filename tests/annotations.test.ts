@@ -14,7 +14,9 @@ describe("annotationChips", () => {
       idempotentHint: true,
       openWorldHint: false,
     });
-    expect(chips).toEqual([{ label: "read-only", tone: "read" }]);
+    expect(chips).toHaveLength(1);
+    expect(chips[0]).toMatchObject({ label: "read-only", tone: "read" });
+    expect(chips[0].meaning).toBeTruthy();
   });
 
   it("maps a destructive write tool", () => {
@@ -24,7 +26,8 @@ describe("annotationChips", () => {
       idempotentHint: true,
       openWorldHint: false,
     });
-    expect(chips).toEqual([{ label: "destructive", tone: "danger" }]);
+    expect(chips).toHaveLength(1);
+    expect(chips[0]).toMatchObject({ label: "destructive", tone: "danger" });
   });
 
   it("maps a non-idempotent open-world tool (harvest/import)", () => {

@@ -384,7 +384,7 @@ export function EventCard({
                 title={inBand}
                 className="rounded bg-amber-100 px-1 py-0.5 font-mono text-[10px] text-amber-800 dark:bg-amber-950 dark:text-amber-300"
               >
-                in-band error — protocol ✓, payload ✗
+                error inside the result — call succeeded
               </span>
             )}
           </div>

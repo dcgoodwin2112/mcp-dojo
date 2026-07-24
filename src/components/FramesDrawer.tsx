@@ -30,7 +30,7 @@ function Frame({ label, data }: { label: string; data: unknown }) {
 }
 
 /**
- * Raw frames: the JSON-RPC exchanges, paired request/response by requestId —
+ * Raw JSON-RPC drawer: the exchanges, paired request/response by requestId —
  * including the initialize handshake. Teaches the protocol from real frames.
  * A pure rendering of the rpc.* events in the log.
  */
@@ -71,7 +71,7 @@ export function FramesDrawer({ events }: { events: InspectorEvent[] }) {
       <div className="flex shrink-0 items-center gap-2 border-b border-zinc-200 px-3 py-1.5 dark:border-zinc-800">
         <span className="font-mono text-xs font-semibold text-zinc-500 dark:text-zinc-400">{"{ }"}</span>
         <span className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">
-          JSON-RPC frames
+          Raw JSON-RPC
         </span>
         <span className="text-xs text-zinc-500 dark:text-zinc-400">
           {pairs.length} exchange{pairs.length === 1 ? "" : "s"} · paired by request id

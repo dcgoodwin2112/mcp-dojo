@@ -23,7 +23,7 @@ export function AnnotationChips({
       {chips.map((c) => (
         <span
           key={c.label}
-          title="Advisory annotation from tools/list — hosts must not treat hints as security"
+          title={`${c.meaning} — advisory hint from tools/list; apps must not treat hints as security`}
           className={`shrink-0 rounded px-1 py-0.5 font-mono text-[10px] ${TONE_STYLES[c.tone]}`}
         >
           {c.label}

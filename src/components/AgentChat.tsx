@@ -310,7 +310,7 @@ export function AgentChat({
               loop.stepMode = e.target.checked;
             }}
           />
-          step between hops
+          pause before each model call
         </label>
         {waiting && (
           <button

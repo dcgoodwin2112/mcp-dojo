@@ -37,7 +37,7 @@ const ERROR_CHANNELS: Array<{ label: string; dot: string; desc: string }> = [
   {
     label: "tool result",
     dot: "bg-amber-500",
-    desc: "protocol success; the failure rides in the payload (isError or an in-band error field) — the model sees it and can react",
+    desc: "the call succeeds; the failure is inside the result data (isError or an error field) — the model sees it and can react",
   },
   {
     label: "JSON-RPC",

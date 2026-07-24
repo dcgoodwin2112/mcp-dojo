@@ -85,7 +85,7 @@ export function ReplayView({
           onChange={(e) => setSelected(e.target.value)}
           className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
         >
-          <option value="__prop">Loaded session ({propLog.sessionId})</option>
+          <option value="__prop">This session&#39;s recording</option>
           {RECORDINGS.map((r) => (
             <option key={r.id} value={r.id}>
               {r.label}
@@ -113,14 +113,14 @@ export function ReplayView({
           type="button"
           onClick={() => setView(view === "frames" ? null : "frames")}
           aria-pressed={view === "frames"}
-          title="Show raw JSON-RPC frames"
+          title="Show the raw JSON-RPC messages"
           className={`rounded-md border px-2.5 py-1 font-mono text-xs ${
             view === "frames"
               ? "border-cyan-500 bg-cyan-50 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300"
               : "border-zinc-300 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
           }`}
         >
-          {"{ }"} Raw frames
+          {"{ }"} Raw JSON-RPC
         </button>
       </div>
       )}

@@ -272,7 +272,7 @@ export function LiveView({
             />
             <details className="text-xs text-zinc-500 dark:text-zinc-400">
               <summary className="cursor-pointer select-none hover:text-zinc-600 dark:hover:text-zinc-300">
-                force-call a hidden tool…
+                call a tool by name (even hidden ones)…
               </summary>
               <div className="mt-1.5 flex items-center gap-2">
                 <input
@@ -280,7 +280,7 @@ export function LiveView({
                   value={forceName}
                   onChange={(e) => setForceName(e.target.value)}
                   placeholder="update_dataset"
-                  aria-label="Tool name to force-call"
+                  aria-label="Tool name to call"
                   className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 font-mono dark:border-zinc-700 dark:bg-zinc-900 placeholder:text-zinc-500 dark:placeholder:text-zinc-400"
                 />
                 <button
@@ -405,14 +405,14 @@ export function LiveView({
             type="button"
             onClick={() => setView(view === "frames" ? null : "frames")}
             aria-pressed={view === "frames"}
-            title="Show raw JSON-RPC frames"
+            title="Show the raw JSON-RPC messages"
             className={`rounded-md border px-2 py-0.5 font-mono text-xs ${
               view === "frames"
                 ? "border-cyan-500 bg-cyan-50 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300"
                 : "border-zinc-300 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
           >
-            {"{ }"} Raw frames
+            {"{ }"} Raw JSON-RPC
           </button>
           <button
             type="button"

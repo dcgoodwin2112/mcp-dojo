@@ -6,12 +6,12 @@ import fullDemoJson from "./goldens/full-demo.json";
 export const RECORDINGS: Array<{ id: string; label: string; log: EventLog }> = [
   {
     id: "full-demo",
-    label: "Golden: full demo, beats 1–7 (recorded 2026-07-24)",
+    label: "Full demo — steps 1–7 (recorded 2026-07-24)",
     log: EventLogSchema.parse(fullDemoJson),
   },
   {
     id: "denial-authored",
-    label: "Authored sample: denial teaching moment",
+    label: "Scripted example: permission denial",
     log: denialSession,
   },
 ];

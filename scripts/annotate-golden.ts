@@ -33,37 +33,37 @@ interface Beat {
 
 const BEATS: Beat[] = [
   {
-    text: "Beat 1 — Connect. Watch the MCP handshake: a redacted OAuth token, initialize, then discovery. Three primitives, three colors: tools, resources, prompts.",
+    text: "Step 1 — Connect. Watch the MCP handshake: a redacted OAuth token, initialize, then discovery. Three primitives, three colors: tools, resources, prompts.",
     pause: true,
     match: (e, seen) => e.type === "auth.persona.selected" && (seen["auth.persona.selected"] ?? 0) === 0,
   },
   {
-    text: "Beat 2 — Manual mode. search_datasets fired by hand from a form generated from its inputSchema. No model involved: it's just a typed function over HTTP.",
+    text: "Step 2 — Manual mode. search_datasets fired by hand from a form generated from its inputSchema. No model involved: it's just a typed function over HTTP.",
     pause: true,
     match: (e) => e.type === "tool.call.requested" && e.toolName === "search_datasets" && e.actor === "user",
   },
   {
-    text: "Beat 3 — Agent mode. Same tool, but now the MODEL chooses to call it. Watch the loop: context → model → tool call → JSON-RPC → result → back into the loop.",
+    text: "Step 3 — Agent mode. Same tool, but now the MODEL chooses to call it. Watch the loop: context → model → tool call → JSON-RPC → result → back into the loop.",
     pause: true,
     match: (e, seen) => e.type === "turn.started" && (seen["turn.started"] ?? 0) === 0,
   },
   {
-    text: "Beat 4 — Prompts are user-controlled. Typed as a slash command (MCP completion fills the dataset id — watch the completion/complete frames), expanded server-side, previewed BEFORE sending — then the model runs the prompt's recipe.",
+    text: "Step 4 — Prompts are user-controlled. Typed as a slash command (MCP completion fills the dataset id — watch the completion/complete frames), expanded server-side, previewed BEFORE sending — then the model runs the prompt's recipe.",
     pause: true,
     match: (e) => e.type === "prompt.invoked",
   },
   {
-    text: "Beat 5 — Resources are app-controlled. The app reads the dataset's DCAT-US metadata and attaches it; the context snapshot shows exactly what the model receives.",
+    text: "Step 5 — Resources are app-controlled. The app reads the dataset's DCAT-US metadata and attaches it; the context snapshot shows exactly what the model receives.",
     pause: true,
     match: (e) => e.type === "rpc.request" && e.method === "resources/read",
   },
   {
-    text: "Beat 6 — Persona switch. A new token, a new MCP session — and 13 more tools appear. The MCP surface is permission-dependent, driven by Drupal's own permission system.",
+    text: "Step 6 — Persona switch. A new token, a new MCP session — and 13 more tools appear. The MCP surface is permission-dependent, driven by Drupal's own permission system.",
     pause: true,
     match: (e, seen) => e.type === "auth.persona.selected" && seen["auth.persona.selected"] === 1,
   },
   {
-    text: "Beat 7 — Back to read-only, and ask the agent to CHANGE something. It can't: update_dataset was never in its tools/list, so the model has nothing to call.",
+    text: "Step 7 — Back to read-only, and ask the agent to CHANGE something. It can't: update_dataset was never in its tools/list, so the model has nothing to call.",
     pause: true,
     match: (e, seen) => e.type === "auth.persona.selected" && seen["auth.persona.selected"] === 2,
   },
