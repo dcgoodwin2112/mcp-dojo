@@ -18,10 +18,12 @@ export type DiagramRow =
       from: Lane;
       to: Lane;
       label: string;
+      /** Fuller text revealed on hover; label is the compact fallback. */
+      detail?: string;
       dashed?: boolean;
       tone?: "error";
     }
-  | { kind: "note"; id: string; lane: Lane; label: string }
+  | { kind: "note"; id: string; lane: Lane; label: string; detail?: string }
   | { kind: "banner"; id: string; label: string };
 
 function short(s: string, n = 42): string {
@@ -40,10 +42,10 @@ export function diagramRows(events: InspectorEvent[]): DiagramRow[] {
     from: Lane,
     to: Lane,
     label: string,
-    opts: { dashed?: boolean; tone?: "error" } = {},
+    opts: { detail?: string; dashed?: boolean; tone?: "error" } = {},
   ) => rows.push({ kind: "arrow", id, from, to, label, ...opts });
-  const note = (id: string, lane: Lane, label: string) =>
-    rows.push({ kind: "note", id, lane, label });
+  const note = (id: string, lane: Lane, label: string, detail?: string) =>
+    rows.push({ kind: "note", id, lane, label, detail });
 
   for (const e of events) {
     switch (e.type) {
@@ -79,7 +81,7 @@ export function diagramRows(events: InspectorEvent[]): DiagramRow[] {
         break;
       }
       case "user.message":
-        arrow(e.id, "user", "app", short(e.text));
+        arrow(e.id, "user", "app", short(e.text), { detail: short(e.text, 220) });
         break;
       case "context.snapshot": {
         const tools = e.blocks.find((b) => b.kind === "tool_definitions");
@@ -100,7 +102,9 @@ export function diagramRows(events: InspectorEvent[]): DiagramRow[] {
         } else {
           arrow(`${e.id}-use`, "user", "app", `call ${e.toolName}`);
         }
-        arrow(`${e.id}-call`, "app", "server", `tools/call ${e.toolName} ${args}`);
+        arrow(`${e.id}-call`, "app", "server", `tools/call ${e.toolName} ${args}`, {
+          detail: `tools/call ${e.toolName} ${short(JSON.stringify(e.args), 220)}`,
+        });
         break;
       }
       case "tool.call.completed":
@@ -110,14 +114,16 @@ export function diagramRows(events: InspectorEvent[]): DiagramRow[] {
         });
         break;
       case "resource.read":
-        arrow(`${e.id}-req`, "app", "server", `resources/read ${shortUri(e.uri)}`);
+        arrow(`${e.id}-req`, "app", "server", `resources/read ${shortUri(e.uri)}`, {
+          detail: `resources/read ${e.uri}`,
+        });
         arrow(`${e.id}-res`, "server", "app", `contents · ${e.latencyMs} ms`, { dashed: true });
         break;
       case "resource.attached":
-        note(e.id, "app", `attached ${shortUri(e.uri)} to context`);
+        note(e.id, "app", `attached ${shortUri(e.uri)} to context`, `attached ${e.uri} to context`);
         break;
       case "resource.detached":
-        note(e.id, "app", `detached ${shortUri(e.uri)}`);
+        note(e.id, "app", `detached ${shortUri(e.uri)}`, `detached ${e.uri}`);
         break;
       case "prompt.invoked":
         arrow(`${e.id}-inv`, "user", "app", `/${e.promptName}`);
@@ -127,19 +133,20 @@ export function diagramRows(events: InspectorEvent[]): DiagramRow[] {
         arrow(e.id, "server", "app", "expanded messages (previewed)", { dashed: true });
         break;
       case "model.text":
-        arrow(e.id, "model", "app", short(e.text), { dashed: true });
+        arrow(e.id, "model", "app", short(e.text), { dashed: true, detail: short(e.text, 220) });
         break;
       case "context.updated":
-        note(e.id, "app", `✎ ${short(e.detail, 48)}`);
+        note(e.id, "app", `✎ ${short(e.detail, 48)}`, `✎ ${short(e.detail, 220)}`);
         break;
       case "error":
         if (e.scope === "rpc" || e.scope === "auth") {
           arrow(e.id, "server", "app", short(`${e.code ?? ""} ${e.message}`, 48), {
             dashed: true,
             tone: "error",
+            detail: short(`${e.code ?? ""} ${e.message}`, 220),
           });
         } else {
-          note(e.id, "app", short(`error: ${e.message}`, 48));
+          note(e.id, "app", short(`error: ${e.message}`, 48), short(`error: ${e.message}`, 220));
         }
         break;
       case "session.ended":
