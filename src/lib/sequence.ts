@@ -35,6 +35,49 @@ function shortUri(uri: string): string {
   return short(uri.replace(/^dkan:\/\//, ""), 36);
 }
 
+export type ActivationSegment = { lane: Lane; pos: "start" | "mid" | "end" };
+
+/**
+ * Activation spans (Mermaid-style "busy" bars) derived from the rows: a lane
+ * activates when a request arrow points INTO it and deactivates on the next
+ * arrow, which in this app's sequential flow is that lane answering. If the
+ * next arrow is anything else, the request got no reply (e.g. a context
+ * snapshot shown without a model call) — the span is aborted, not left
+ * dangling. Only the callee lanes (model, server) activate — user and app
+ * drive the conversation. A span still open at the end (in-flight call in a
+ * live session) runs through the last row. Returns, per row, the active
+ * lanes with the segment's position so the bar can start/end at the arrow.
+ */
+export function activeLanes(rows: DiagramRow[]): ActivationSegment[][] {
+  const out: ActivationSegment[][] = rows.map(() => []);
+  for (const lane of ["model", "server"] as const) {
+    let openAt = -1;
+    const close = (start: number, end: number, closed: boolean) => {
+      out[start].push({ lane, pos: "start" });
+      for (let k = start + 1; k < end; k++) out[k].push({ lane, pos: "mid" });
+      if (closed) out[end].push({ lane, pos: "end" });
+      else if (end > start) out[end].push({ lane, pos: "mid" });
+    };
+    rows.forEach((row, i) => {
+      if (row.kind !== "arrow") return;
+      if (openAt !== -1) {
+        if (row.from === lane) {
+          close(openAt, i, true);
+          openAt = -1;
+        } else {
+          // Someone else spoke before the lane answered — abort the span
+          // (and re-open here if this arrow is itself a new request).
+          openAt = row.to === lane ? i : -1;
+        }
+      } else if (row.to === lane) {
+        openAt = i;
+      }
+    });
+    if (openAt !== -1) close(openAt, rows.length - 1, false);
+  }
+  return out;
+}
+
 export function diagramRows(events: InspectorEvent[]): DiagramRow[] {
   const rows: DiagramRow[] = [];
   const arrow = (
