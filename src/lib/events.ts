@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * MCP Inspector — Event Log Schema v2.
+ * MCP Lens — Event Log Schema v2.
  *
  * Zod schemas are the source of truth; TypeScript types are inferred.
  * See mcp-inspector-handoff-plan.md for design principles: the log is the

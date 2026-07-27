@@ -4,9 +4,11 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# MCP Inspector — agent guide
+# MCP Lens — agent guide
 
 MCP demo client (Next.js 16 / React 19 / TS / Tailwind v4) for the DKAN talk.
+Named "MCP Lens" (formerly "MCP Inspector"); the repo slug and directory keep
+the old name.
 User-facing docs: [README.md](README.md). Demo script: [DEMO-RUNBOOK.md](DEMO-RUNBOOK.md).
 Feature backlog: [ROADMAP.md](ROADMAP.md).
 History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).

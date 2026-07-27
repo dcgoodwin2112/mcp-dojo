@@ -76,7 +76,7 @@ export const denialSession: EventLog = EventLogSchema.parse({
         method: "initialize",
         params: {
           protocolVersion: "2025-06-18",
-          clientInfo: { name: "mcp-inspector", version: "0.1.0" },
+          clientInfo: { name: "mcp-lens", version: "0.1.0" },
           capabilities: {},
         },
       },

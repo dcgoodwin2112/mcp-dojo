@@ -33,7 +33,7 @@ export default function Home() {
     <div className="flex h-dvh w-full flex-col overflow-hidden px-4">
       {!present && (
         <header className="flex shrink-0 items-center gap-3 border-b border-zinc-200 py-2.5 dark:border-zinc-800">
-          <h1 className="text-lg font-semibold">MCP Inspector</h1>
+          <h1 className="text-lg font-semibold">MCP Lens</h1>
           <div className="flex rounded-md border border-zinc-300 p-0.5 dark:border-zinc-700">
             {(["live", "replay"] as const).map((m) => (
               <button
