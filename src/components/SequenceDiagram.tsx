@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { InspectorEvent } from "@/lib/events";
-import { diagramRows, LANES, type DiagramRow } from "@/lib/sequence";
+import {
+  activeLanes,
+  diagramRows,
+  LANES,
+  type ActivationSegment,
+  type DiagramRow,
+} from "@/lib/sequence";
 import { ACTOR_STYLES } from "@/lib/ui";
 
 /**
@@ -83,8 +89,33 @@ function Banner({ row }: { row: Extract<DiagramRow, { kind: "banner" }> }) {
   );
 }
 
+/** Mermaid-style activation strips: the callee lane's "busy" bar segment for
+    one row. Consecutive rows' segments stack into a continuous bar; start/end
+    segments stop at the arrow line (top-4, +2px border) so each exchange
+    reads as its own bar with gaps between exchanges. */
+function ActivationStrips({ segments }: { segments: ActivationSegment[] }) {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      {segments.map(({ lane, pos }) => (
+        <div
+          key={lane}
+          className={`absolute w-1.5 -translate-x-1/2 ${ACTOR_STYLES[lane].activation} ${
+            pos === "start"
+              ? "bottom-0 top-4 rounded-t-sm"
+              : pos === "end"
+                ? "top-0 h-[18px] rounded-b-sm"
+                : "bottom-0 top-0"
+          }`}
+          style={{ left: `${center(lane)}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function SequenceDiagram({ events }: { events: InspectorEvent[] }) {
   const rows = useMemo(() => diagramRows(events), [events]);
+  const active = useMemo(() => activeLanes(rows), [rows]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
 
@@ -134,15 +165,23 @@ export function SequenceDiagram({ events }: { events: InspectorEvent[] }) {
             ))}
           </div>
           <div role="list" aria-label="Sequence diagram" className="relative py-2">
-            {rows.map((row) =>
-              row.kind === "arrow" ? (
-                <Arrow key={row.id} row={row} />
-              ) : row.kind === "note" ? (
-                <Note key={row.id} row={row} />
-              ) : (
-                <Banner key={row.id} row={row} />
-              ),
-            )}
+            {rows.map((row, i) => (
+              <div key={row.id} className="relative">
+                {row.kind === "arrow" ? (
+                  <Arrow row={row} />
+                ) : row.kind === "note" ? (
+                  <Note row={row} />
+                ) : (
+                  <Banner row={row} />
+                )}
+                {/* Strips render after the row so they sit above its hover
+                    background; hovered labels still win via their z-index.
+                    Banners skip them — the bar passes visibly "behind". */}
+                {row.kind !== "banner" && active[i].length > 0 && (
+                  <ActivationStrips segments={active[i]} />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

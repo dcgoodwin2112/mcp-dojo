@@ -15,6 +15,7 @@ export const ACTOR_STYLES: Record<
     arrowLine: string;
     arrowHead: string;
     lifeline: string;
+    activation: string;
     noteBorder: string;
   }
 > = {
@@ -25,6 +26,7 @@ export const ACTOR_STYLES: Record<
     arrowLine: "border-emerald-600 dark:border-emerald-500",
     arrowHead: "text-emerald-600 dark:text-emerald-400",
     lifeline: "border-emerald-500/30",
+    activation: "bg-emerald-500/20 border-x border-emerald-500/40",
     noteBorder: "border-emerald-300 dark:border-emerald-900",
   },
   model: {
@@ -34,6 +36,7 @@ export const ACTOR_STYLES: Record<
     arrowLine: "border-fuchsia-600 dark:border-fuchsia-500",
     arrowHead: "text-fuchsia-600 dark:text-fuchsia-400",
     lifeline: "border-fuchsia-500/30",
+    activation: "bg-fuchsia-500/20 border-x border-fuchsia-500/40",
     noteBorder: "border-fuchsia-300 dark:border-fuchsia-900",
   },
   app: {
@@ -43,6 +46,7 @@ export const ACTOR_STYLES: Record<
     arrowLine: "border-sky-600 dark:border-sky-500",
     arrowHead: "text-sky-600 dark:text-sky-400",
     lifeline: "border-sky-500/30",
+    activation: "bg-sky-500/20 border-x border-sky-500/40",
     noteBorder: "border-sky-300 dark:border-sky-900",
   },
   server: {
@@ -52,6 +56,7 @@ export const ACTOR_STYLES: Record<
     arrowLine: "border-orange-600 dark:border-orange-500",
     arrowHead: "text-orange-600 dark:text-orange-400",
     lifeline: "border-orange-500/30",
+    activation: "bg-orange-500/20 border-x border-orange-500/40",
     noteBorder: "border-orange-300 dark:border-orange-900",
   },
 };
