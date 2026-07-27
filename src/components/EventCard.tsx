@@ -6,6 +6,7 @@ import { specNote, type SpecNote } from "@/lib/spec-notes";
 import { inBandError } from "@/lib/tool-result";
 import type { CapabilitiesListed } from "@/lib/timeline-rows";
 import { PRIMITIVE_STYLES } from "@/lib/ui";
+import { JsonBlock } from "./JsonBlock";
 import { Markdown } from "./Markdown";
 
 function CapChips({ items }: { items: CapabilityItem[] }) {
@@ -30,9 +31,10 @@ function Json({ data }: { data: unknown }) {
   // Long escaped-JSON strings render as one huge line — wrap them and cap the
   // block's height with its own scrollbar so everything stays reachable.
   return (
-    <pre className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-all rounded bg-zinc-100 p-2 font-mono text-xs leading-relaxed dark:bg-zinc-900">
-      {JSON.stringify(data, null, 2)}
-    </pre>
+    <JsonBlock
+      data={data}
+      className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-all rounded bg-zinc-100 p-2 font-mono text-xs leading-relaxed dark:bg-zinc-900"
+    />
   );
 }
 

@@ -5,6 +5,7 @@ import type { AgentLoop, ContentBlock } from "@/lib/agent";
 import type { InspectorEvent } from "@/lib/events";
 import { AGENT_SYSTEM_SUMMARY, type LiveSession } from "@/lib/live";
 import { ContextMeter } from "./ContextMeter";
+import { JsonBlock } from "./JsonBlock";
 
 /**
  * The EXACT context the next model call will send — read live from the agent
@@ -102,9 +103,11 @@ function Blocks({ content }: { content: unknown }) {
           return (
             <div key={i} className="rounded border-l-2 border-cyan-500 bg-zinc-50 p-1.5 dark:bg-zinc-950">
               <span className="font-mono text-[11px] font-semibold">⚙ tool_use · {b.name}</span>
-              <pre className="mt-0.5 whitespace-pre-wrap break-all font-mono text-[10px]">
-                {JSON.stringify(b.input, null, 1)}
-              </pre>
+              <JsonBlock
+                data={b.input}
+                indent={1}
+                className="mt-0.5 whitespace-pre-wrap break-all font-mono text-[10px]"
+              />
             </div>
           );
         }
@@ -148,9 +151,12 @@ function Blocks({ content }: { content: unknown }) {
           );
         }
         return (
-          <pre key={i} className="whitespace-pre-wrap break-all font-mono text-[10px]">
-            {JSON.stringify(b, null, 1)}
-          </pre>
+          <JsonBlock
+            key={i}
+            data={b}
+            indent={1}
+            className="whitespace-pre-wrap break-all font-mono text-[10px]"
+          />
         );
       })}
     </div>
