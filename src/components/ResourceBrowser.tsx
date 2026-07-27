@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { CapabilityItem } from "@/lib/events";
 import type { ResourceContent } from "@/lib/live";
+import { JsonBlock } from "./JsonBlock";
 
 /**
  * App-controlled primitive, browsable: templated URIs get inputs for their
@@ -15,20 +16,25 @@ function ContentView({ blocks }: { blocks: ResourceContent[] }) {
   return (
     <div className="mt-2 space-y-1.5">
       {blocks.map((b, i) => {
-        let pretty = b.text ?? "(no text content)";
+        const cls =
+          "max-h-56 overflow-y-auto whitespace-pre-wrap break-all rounded bg-zinc-100 p-1.5 font-mono text-[11px] leading-relaxed dark:bg-zinc-950";
+        let parsed: unknown;
+        let isJson = true;
         try {
-          pretty = JSON.stringify(JSON.parse(b.text ?? ""), null, 2);
+          parsed = JSON.parse(b.text ?? "");
         } catch {
-          /* not JSON — show as-is */
+          isJson = false; // not JSON — show as-is
         }
         return (
           <div key={i}>
             <span className="text-[10px] uppercase text-zinc-500 dark:text-zinc-400">
               {b.mimeType ?? "content"} · {b.uri}
             </span>
-            <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap break-all rounded bg-zinc-100 p-1.5 font-mono text-[11px] leading-relaxed dark:bg-zinc-950">
-              {pretty}
-            </pre>
+            {isJson ? (
+              <JsonBlock data={parsed} className={cls} />
+            ) : (
+              <pre className={cls}>{b.text ?? "(no text content)"}</pre>
+            )}
           </div>
         );
       })}

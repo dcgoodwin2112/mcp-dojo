@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CapabilityItem } from "@/lib/events";
 import { PRIMITIVE_STYLES } from "@/lib/ui";
 import { AnnotationChips } from "./AnnotationChips";
+import { JsonBlock } from "./JsonBlock";
 
 /** Curated subset shown by default — 38 tools is too many for one screen. */
 const DEMO_TOOLS = new Set([
@@ -85,9 +86,11 @@ function Column({
               )}
             </div>
             {openSchema === item.name && item.schema !== undefined && (
-              <pre className="mt-1 overflow-x-auto rounded bg-zinc-100 p-1.5 font-mono text-[10px] leading-relaxed dark:bg-zinc-950">
-                {JSON.stringify(item.schema, null, 1)}
-              </pre>
+              <JsonBlock
+                data={item.schema}
+                indent={1}
+                className="mt-1 overflow-x-auto rounded bg-zinc-100 p-1.5 font-mono text-[10px] leading-relaxed dark:bg-zinc-950"
+              />
             )}
           </li>
         ))}

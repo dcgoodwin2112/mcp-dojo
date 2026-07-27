@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { InspectorEvent } from "@/lib/events";
+import { JsonBlock } from "./JsonBlock";
 
 type RpcRequest = Extract<InspectorEvent, { type: "rpc.request" }>;
 type RpcResponse = Extract<InspectorEvent, { type: "rpc.response" }>;
@@ -22,9 +23,10 @@ function Frame({ label, data }: { label: string; data: unknown }) {
   return (
     <div>
       <span className="text-[10px] font-semibold uppercase text-zinc-500 dark:text-zinc-400">{label}</span>
-      <pre className="mt-0.5 max-h-56 overflow-y-auto whitespace-pre-wrap break-all rounded bg-zinc-100 p-1.5 font-mono text-[11px] leading-relaxed dark:bg-zinc-950">
-        {JSON.stringify(data, null, 2)}
-      </pre>
+      <JsonBlock
+        data={data}
+        className="mt-0.5 max-h-56 overflow-y-auto whitespace-pre-wrap break-all rounded bg-zinc-100 p-1.5 font-mono text-[11px] leading-relaxed dark:bg-zinc-950"
+      />
     </div>
   );
 }
