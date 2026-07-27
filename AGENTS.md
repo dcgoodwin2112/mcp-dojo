@@ -7,8 +7,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # MCP Lens — agent guide
 
 MCP demo client (Next.js 16 / React 19 / TS / Tailwind v4) for the DKAN talk.
-Named "MCP Lens" (formerly "MCP Inspector"); the repo slug and directory keep
-the old name.
+Named "MCP Lens" (formerly "MCP Inspector"); the local directory keeps the
+old name.
 User-facing docs: [README.md](README.md). Demo script: [DEMO-RUNBOOK.md](DEMO-RUNBOOK.md).
 Feature backlog: [ROADMAP.md](ROADMAP.md).
 History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).
@@ -73,4 +73,4 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
   (ref/resource on `{id}`, 13 UUIDs on empty input) — distribution and
   datastore-schema templates have no completers (empty result, not an error). DKAN site + consumers setup: plan's provisioning checklist.
 - **Commits**: concise, no hype; push to `origin main`
-  (github.com/dcgoodwin2112/mcp-inspector).
+  (github.com/dcgoodwin2112/mcp-lens).
