@@ -60,6 +60,7 @@ export function ReplayView({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (document.documentElement.dataset.dialogOpen) return;
       if (e.target instanceof HTMLElement && /^(input|textarea|select)$/i.test(e.target.tagName)) {
         return;
       }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { EventLog } from "@/lib/events";
 import { RECORDINGS } from "@/lib/fixtures";
+import { HelpDialog } from "@/components/HelpDialog";
 import { LiveView } from "@/components/LiveView";
 import { Logo } from "@/components/Logo";
 import { ReplayView } from "@/components/ReplayView";
@@ -11,13 +12,38 @@ import { REPLAY_ONLY } from "@/lib/replay-only";
 
 type Mode = "live" | "replay";
 
+// localStorage can throw in restricted modes — degrade to showing the
+// hosted welcome once per page load.
+function readHelpSeen(): string | null {
+  try {
+    return localStorage.getItem("inspector.helpSeen");
+  } catch {
+    return null;
+  }
+}
+function markHelpSeen(): void {
+  try {
+    localStorage.setItem("inspector.helpSeen", "1");
+  } catch {
+    // best effort
+  }
+}
+
 export default function Home() {
   const [mode, setMode] = useState<Mode>(REPLAY_ONLY ? "replay" : "live");
   const [replayLog, setReplayLog] = useState<EventLog | null>(null);
   const [present, setPresent] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // Hosted first visit: the help dialog is the welcome screen. Decided in
+  // an effect so the prerendered output stays deterministic.
+  useEffect(() => {
+    if (REPLAY_ONLY && readHelpSeen() !== "1") setHelpOpen(true);
+  }, []);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (document.documentElement.dataset.dialogOpen) return;
       if (e.target instanceof HTMLElement && /^(input|textarea|select)$/i.test(e.target.tagName)) {
         return;
       }
@@ -62,9 +88,17 @@ export default function Home() {
           </span>
           <button
             type="button"
+            onClick={() => setHelpOpen(true)}
+            title="Help — what is this?"
+            className="ml-auto rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            ? Help
+          </button>
+          <button
+            type="button"
             onClick={() => setPresent(true)}
             title="Presentation mode (p)"
-            className="ml-auto rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             ⊡ Present
           </button>
@@ -102,6 +136,13 @@ export default function Home() {
       {mode === "replay" && (
         <ReplayView log={replayLog ?? RECORDINGS[0].log} present={present} />
       )}
+      <HelpDialog
+        open={helpOpen}
+        onClose={() => {
+          markHelpSeen();
+          setHelpOpen(false);
+        }}
+      />
     </div>
   );
 }

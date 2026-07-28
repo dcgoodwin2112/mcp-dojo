@@ -56,6 +56,7 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
 | `src/components/LiveView.tsx` | split layout, wiring, drawers |
 | `src/components/ContextInspector.tsx` | live context view + edits |
 | `src/lib/replay-only.ts` | `REPLAY_ONLY` flag (hosted static build; set by `build:static`) |
+| `src/components/HelpDialog.tsx` | native-dialog help/welcome (auto-opens hosted first visit via `inspector.helpSeen`; sets `data-dialog-open` on `<html>` — window key handlers must check it first) |
 | `src/lib/log-import.ts` | bounded parse of user-opened .json logs (10 MB / 10k events) |
 | `src/lib/fixtures/` | authored sample + `goldens/full-demo.json`; registry in `index.ts` |
 | `scripts/annotate-golden.ts` | recorded log → narration-annotated golden |
