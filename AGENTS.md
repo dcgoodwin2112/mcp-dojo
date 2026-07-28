@@ -44,8 +44,10 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
 | `src/lib/replay.ts` | framework-free replay controller |
 | `src/lib/live.ts` | LiveSession: proxy calls → events; tools/resources/prompts ops; tool toggles, detach |
 | `src/lib/agent.ts` | client-side agent loop (step gating, editable systemBase, clearConversation) |
-| `src/lib/profiles.ts` | server-only connection profiles from env |
-| `src/app/api/mcp/route.ts` | OAuth mint/cache + JSON-RPC forward + SSE parse |
+| `src/lib/profiles.ts` | server-only profile registry (loads profiles.config.json) |
+| `src/lib/profile-config.ts` | pure profile-config parsing: zod schema, ${ENV} interpolation, secret rules |
+| `src/lib/proxy-auth.ts` | pure auth dispatch (none / bearer / oauth) for the proxy |
+| `src/app/api/mcp/route.ts` | auth dispatch + OAuth mint/cache + JSON-RPC forward + SSE parse; per-profile TLS via undici dispatcher |
 | `src/app/api/agent/route.ts` | one Anthropic call per request (loop is client-side) |
 | `src/components/LiveView.tsx` | split layout, wiring, drawers |
 | `src/components/ContextInspector.tsx` | live context view + edits |

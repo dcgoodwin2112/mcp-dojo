@@ -24,9 +24,23 @@ Plan and architecture: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-pla
 ## Setup
 
 Replay mode needs no setup — run the dev server and pick a recording. Live
-mode requires an MCP server; the shipped profile targets a DKAN site with
+mode requires an MCP server. Connections are declared in
+`profiles.config.json` (committed; secrets enter via `${ENV_VAR}`
+references into `.env.local`). Each profile picks an auth strategy —
+`none`, `bearer`, or `oauth-client-credentials` — with personas as
+credential sets. The shipped profile targets a DKAN site with
 `dkan_mcp_server` + the simple_oauth stack and two `client_credentials`
-consumers (see the plan's provisioning checklist).
+consumers (see the plan's provisioning checklist). Example of adding a
+no-auth server:
+
+```json
+{
+  "id": "everything",
+  "name": "Reference server",
+  "transport": { "kind": "streamable-http", "url": "http://localhost:3001/mcp" },
+  "auth": { "type": "none" }
+}
+```
 
 ```bash
 npm install
