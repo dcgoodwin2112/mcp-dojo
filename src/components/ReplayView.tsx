@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { EventLog } from "@/lib/events";
 import { RECORDINGS } from "@/lib/fixtures";
+import { MAX_LOG_BYTES, parseEventLogJson } from "@/lib/log-import";
 import { useDrawerResize } from "@/hooks/useDrawerResize";
 import { useReplay } from "@/hooks/useReplay";
 import { isRpcEvent, useActiveView } from "@/hooks/useRawFrames";
@@ -19,10 +20,33 @@ export function ReplayView({
   present?: boolean;
 }) {
   const [selected, setSelected] = useState("__prop");
+  /** Logs opened from disk this session — never persisted, just EventLogs. */
+  const [opened, setOpened] = useState<Array<{ id: string; label: string; log: EventLog }>>([]);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const openedSeq = useRef(0);
   const log =
     selected === "__prop"
       ? propLog
-      : (RECORDINGS.find((r) => r.id === selected)?.log ?? propLog);
+      : (opened.find((o) => o.id === selected)?.log ??
+        RECORDINGS.find((r) => r.id === selected)?.log ??
+        propLog);
+
+  async function openLogFile(file: File) {
+    if (file.size > MAX_LOG_BYTES) {
+      setImportError(`${file.name} is larger than ${MAX_LOG_BYTES / 1024 / 1024} MB`);
+      return;
+    }
+    const result = parseEventLogJson(await file.text());
+    if (!result.ok) {
+      setImportError(`${file.name}: ${result.error}`);
+      return;
+    }
+    const id = `opened-${++openedSeq.current}`;
+    setOpened((prev) => [...prev, { id, label: file.name, log: result.log }]);
+    setSelected(id);
+    setImportError(null);
+  }
   const { controller, state } = useReplay(log);
   const [view, setView] = useActiveView();
   const drawer = useDrawerResize();
@@ -67,7 +91,19 @@ export function ReplayView({
   }, [controller, skipEvent]);
 
   return (
-    <div className={`flex min-h-0 flex-1 flex-col ${drawer.dragging ? "select-none" : ""}`}>
+    <div
+      className={`flex min-h-0 flex-1 flex-col ${drawer.dragging ? "select-none" : ""}`}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+      }}
+      onDrop={(e) => {
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+          e.preventDefault();
+          void openLogFile(file);
+        }
+      }}
+    >
       {present ? (
         <div className="fixed bottom-4 left-1/2 z-20 max-w-[95vw] -translate-x-1/2 overflow-x-auto rounded-full border border-zinc-300 bg-white/85 px-4 py-2 opacity-60 shadow-lg backdrop-blur transition-opacity hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900/85">
           <ReplayControls
@@ -91,7 +127,31 @@ export function ReplayView({
               {r.label}
             </option>
           ))}
+          {opened.map((o) => (
+            <option key={o.id} value={o.id}>
+              Opened: {o.label}
+            </option>
+          ))}
         </select>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void openLogFile(file);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          title="Open a log saved with ↓ Save .json (or drop the file anywhere here)"
+          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        >
+          ↑ Open log…
+        </button>
         <div className="flex-1">
           <ReplayControls controller={controller} state={state} skipEvent={skipEvent} onNavigate={onNavigate} />
         </div>
@@ -123,6 +183,20 @@ export function ReplayView({
           {"{ }"} Raw JSON-RPC
         </button>
       </div>
+      )}
+      {importError && (
+        <div className="mt-2 flex shrink-0 items-center gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-1.5 text-xs text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+          <span className="min-w-0 flex-1 truncate" title={importError}>
+            {importError}
+          </span>
+          <button
+            type="button"
+            onClick={() => setImportError(null)}
+            className="shrink-0 font-medium hover:underline"
+          >
+            dismiss
+          </button>
+        </div>
       )}
       <div className={`min-h-0 flex-1 pt-3 ${present ? "mx-auto w-full max-w-4xl" : ""}`}>
         {view === "diagram" ? (

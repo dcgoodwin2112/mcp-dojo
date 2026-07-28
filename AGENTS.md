@@ -55,6 +55,8 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
 | `src/app/api/agent/route.ts` | one Anthropic call per request (loop is client-side) |
 | `src/components/LiveView.tsx` | split layout, wiring, drawers |
 | `src/components/ContextInspector.tsx` | live context view + edits |
+| `src/lib/replay-only.ts` | `REPLAY_ONLY` flag (hosted static build; set by `build:static`) |
+| `src/lib/log-import.ts` | bounded parse of user-opened .json logs (10 MB / 10k events) |
 | `src/lib/fixtures/` | authored sample + `goldens/full-demo.json`; registry in `index.ts` |
 | `scripts/annotate-golden.ts` | recorded log → narration-annotated golden |
 
@@ -83,5 +85,12 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
   covers prompt args and the dataset/dictionary resource templates
   (ref/resource on `{id}`, 13 UUIDs on empty input) — distribution and
   datastore-schema templates have no completers (empty result, not an error). DKAN site + consumers setup: plan's provisioning checklist.
+- **Hosted deploy** (mcpdojo.dev, Netlify, `netlify.toml`): `npm run
+  build:static` — replay-only static export (`NEXT_PUBLIC_REPLAY_ONLY=1`
+  flips `output: "export"` + `pageExtensions: ["tsx"]`, which drops the
+  API routes; `scripts/check-static-out.ts` guards the output). Constraint:
+  route handlers stay `.ts`; dynamic metadata files (`robots.ts`,
+  `sitemap.ts`) would be excluded — use static files or `.tsx`. Live mode
+  renders `RunLocallyCard` in this build. mcpdojo.app 301s to mcpdojo.dev.
 - **Commits**: concise, no hype; push to `origin main`
   (github.com/dcgoodwin2112/mcp-dojo).

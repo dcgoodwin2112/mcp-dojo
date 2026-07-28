@@ -1,0 +1,18 @@
+# Hosted replay-only deployment (mcpdojo.dev). Plain static deploy of the
+# Next `output: "export"` build — the explicit publish dir keeps Netlify's
+# Next.js runtime auto-detection from wrapping the site in serverless
+# functions. See plans/hosted-replay-deployment.md.
+
+[build]
+  command = "npm run build:static"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# mcpdojo.dev is canonical; mcpdojo.app is an alias domain on the same site.
+[[redirects]]
+  from = "https://mcpdojo.app/*"
+  to = "https://mcpdojo.dev/:splat"
+  status = 301
+  force = true

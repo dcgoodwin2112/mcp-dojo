@@ -8,6 +8,11 @@ user-controlled, resources are app-controlled. (Formerly named
 "MCP Inspector"; renamed to avoid colliding with the official debugging
 tool of that name.)
 
+**Try it without installing: [mcpdojo.dev](https://mcpdojo.dev)** — the
+hosted replay experience: bundled recordings plus any log you saved locally
+with ↓ Save .json (↑ Open log… in the Replay tab). Live mode needs servers
+you run yourself, so it's local-only.
+
 Plan and architecture: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).
 
 ## How it works
