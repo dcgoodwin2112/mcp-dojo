@@ -153,6 +153,19 @@ function Card({
               </>
             )}
           </p>
+          {info.transition && (
+            <p className="mt-1 max-w-prose rounded border-l-2 border-amber-400 bg-amber-50 py-1 pl-2 pr-2 text-xs leading-relaxed text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-200">
+              <span className="font-semibold">Changing in 2026-07-28:</span> {info.transition.text}{" "}
+              <a
+                href={info.transition.href}
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                changelog →
+              </a>
+            </p>
+          )}
         </details>
       )}
     </div>

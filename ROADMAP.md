@@ -34,6 +34,10 @@ tool. Decision history: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-pl
   [mcpdojo.dev](https://mcpdojo.dev) (Netlify static export; mcpdojo.app
   301s); replay + Open log…, Live tab points to running locally;
   [plans/hosted-replay-deployment.md](plans/hosted-replay-deployment.md)
+- **Spec-transition ⓘ annotations** (2026-07-28): amber "changing in
+  2026-07-28" blocks on the cards the final revision changes (handshake
+  removal, sessions, listing cacheability, resultType/MRTR, error-code
+  policy), linked to the changelog; `transition` field in `spec-notes.ts`
 
 ## Connection & protocol (remaining)
 
@@ -52,8 +56,6 @@ tool. Decision history: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-pl
 
 ## Learning-tool backlog
 
-- **Spec-transition ⓘ annotations** — mark cards teaching
-  2026-07-28-changed behavior via `spec-notes.ts`; pairs with P4.
 - **Guided lesson mode** — "Learn" tab with checkpoints verified against
   the live log. The flagship conversion from demo to tutorial.
 - **Authored elicitation fixtures** — narrated synthetic recordings

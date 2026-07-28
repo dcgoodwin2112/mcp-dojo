@@ -9,14 +9,48 @@ import { inBandError } from "./tool-result";
  * Links use the site's evergreen `latest` alias (a pinned revision shows an
  * "older version" banner). dkan_mcp_server implements 2025-06-18; every
  * concept these notes reference is stable across revisions.
+ *
+ * `transition` marks behavior the 2026-07-28 revision changes — rendered as
+ * an amber "changing in 2026-07-28" block under the main note. Facts come
+ * from that revision's changelog (the transition link target).
  */
+
+export interface SpecTransition {
+  text: string;
+  href: string;
+}
 
 export interface SpecNote {
   text: string;
   href?: string;
+  transition?: SpecTransition;
 }
 
 const SPEC = "https://modelcontextprotocol.io/specification/latest";
+const CHANGELOG = "https://modelcontextprotocol.io/specification/2026-07-28/changelog";
+
+const TRANSITIONS = {
+  handshake: {
+    text: "This handshake is removed — MCP becomes stateless. Every request carries the protocol version, client capabilities, and client identity in _meta; a new server/discover method serves up-front discovery.",
+    href: CHANGELOG,
+  },
+  sessions: {
+    text: "Protocol-level sessions and the Mcp-Session-Id header are removed. Servers that need cross-call state mint explicit handles and take them back as ordinary tool arguments.",
+    href: CHANGELOG,
+  },
+  listings: {
+    text: "These listings no longer vary per connection, and they declare their own cacheability (ttlMs, cacheScope) — clients cache them instead of re-listing.",
+    href: CHANGELOG,
+  },
+  resultType: {
+    text: "Every result carries a resultType: \"complete\", or \"input_required\" when the server pauses mid-call to ask for more information — the multi-round-trip pattern that replaces server-initiated requests (sampling and elicitation among them).",
+    href: CHANGELOG,
+  },
+  errorCodes: {
+    text: "The server-error range is partitioned: -32020 to -32099 is reserved for the spec, -32000 to -32019 stays implementation-defined (this server's -32002 denial lives there), and resource-not-found moves to -32602.",
+    href: CHANGELOG,
+  },
+} satisfies Record<string, SpecTransition>;
 
 export function specNote(event: InspectorEvent): SpecNote | undefined {
   switch (event.type) {
@@ -29,6 +63,7 @@ export function specNote(event: InspectorEvent): SpecNote | undefined {
       return {
         text: "initialize is MCP's opening handshake: client and server exchange protocol versions and declare capabilities, so each side knows what the other supports. The server may also send instructions — usage guidance the host folds into the model's system prompt.",
         href: `${SPEC}/basic/lifecycle`,
+        transition: TRANSITIONS.handshake,
       };
     case "auth.persona.selected":
       return {
@@ -51,16 +86,19 @@ export function specNote(event: InspectorEvent): SpecNote | undefined {
           return {
             text: "tools/list returns what the MODEL may call — each tool carries a JSON Schema the model uses to build arguments. Model-controlled. Hint chips (read-only, destructive, open-world) are advisory annotations — hosts must not treat them as security.",
             href: `${SPEC}/server/tools`,
+            transition: TRANSITIONS.listings,
           };
         case "resource":
           return {
             text: "resources/list and resources/templates/list return data the APP can attach to context. The model never fetches these itself. App-controlled.",
             href: `${SPEC}/server/resources`,
+            transition: TRANSITIONS.listings,
           };
         case "prompt":
           return {
             text: "prompts/list returns user-invokable templates — the slash commands in the chat box. User-controlled.",
             href: `${SPEC}/server/prompts`,
+            transition: TRANSITIONS.listings,
           };
       }
       return undefined;
@@ -79,6 +117,7 @@ export function specNote(event: InspectorEvent): SpecNote | undefined {
       return {
         text: "A tool result: content blocks for the model, plus optional structuredContent matching the tool's declared outputSchema. Tool-level failures set isError instead of a protocol error.",
         href: `${SPEC}/server/tools`,
+        transition: TRANSITIONS.resultType,
       };
     case "resource.read":
       return {
@@ -130,6 +169,7 @@ export function specNote(event: InspectorEvent): SpecNote | undefined {
         return {
           text: "Error channel 2 of 3 — the PROTOCOL. A JSON-RPC error refused the request (invalid params arrive as -32602 over HTTP 200; permission denials as -32002 over HTTP 403). The APP sees this; the model only learns what the host relays.",
           href: `${SPEC}/basic`,
+          transition: TRANSITIONS.errorCodes,
         };
       }
       return {
@@ -140,6 +180,7 @@ export function specNote(event: InspectorEvent): SpecNote | undefined {
       return {
         text: "The MCP session closed. Sessions on this transport are identified by the Mcp-Session-Id header.",
         href: `${SPEC}/basic/transports`,
+        transition: TRANSITIONS.sessions,
       };
     default:
       return undefined;

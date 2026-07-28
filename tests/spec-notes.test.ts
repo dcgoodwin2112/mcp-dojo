@@ -51,3 +51,37 @@ describe("specNote", () => {
     expect(specNote(ev({ type: "rpc.request" }))).toBeUndefined();
   });
 });
+
+describe("spec transitions (2026-07-28)", () => {
+  const CHANGELOG = "https://modelcontextprotocol.io/specification/2026-07-28/changelog";
+
+  it("marks every card whose behavior the 2026-07-28 revision changes", () => {
+    const changed: InspectorEvent[] = [
+      ev({ type: "mcp.initialized" }),
+      ev({ type: "session.ended" }),
+      ev({ type: "capabilities.listed", primitive: "tool" }),
+      ev({ type: "capabilities.listed", primitive: "resource" }),
+      ev({ type: "capabilities.listed", primitive: "prompt" }),
+      ev({ type: "tool.call.completed", isError: false, result: {} }),
+      ev({ type: "error", scope: "rpc" }),
+    ];
+    for (const e of changed) {
+      const t = specNote(e)?.transition;
+      expect(t?.text, e.type).toBeTruthy();
+      expect(t?.href, e.type).toBe(CHANGELOG);
+    }
+  });
+
+  it("leaves stable behavior unmarked", () => {
+    const stable: InspectorEvent[] = [
+      ev({ type: "user.message" }),
+      ev({ type: "resource.read" }),
+      ev({ type: "prompt.invoked" }),
+      ev({ type: "tool.call.requested" }),
+      ev({ type: "error", scope: "transport" }),
+    ];
+    for (const e of stable) {
+      expect(specNote(e)?.transition, e.type).toBeUndefined();
+    }
+  });
+});
