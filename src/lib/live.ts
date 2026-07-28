@@ -20,8 +20,15 @@ interface ProxyResult {
   sse?: boolean;
   requestFrame?: { id?: string; method?: string } & Record<string, unknown>;
   responseFrame?: unknown;
+  /** EVERY frame the response body carried, classified, in wire order. */
+  ordered?: Array<{ kind: string; frame: unknown }>;
   latencyMs?: number;
   mcpSessionId?: string;
+  /** initialize only: the server's negotiated protocol version and the
+   *  notifications/initialized frame the proxy sent to complete the
+   *  handshake. */
+  negotiatedProtocolVersion?: string;
+  initializedFrame?: unknown;
   token?: { minted: boolean; scopes: string[]; expiresAt: string };
   transportError?: string;
 }
@@ -77,6 +84,9 @@ export interface ToolOutcome {
 export class LiveSession {
   private mcpSessionId: string | undefined;
   private profileId = "";
+  /** The protocol version the SERVER negotiated on initialize — sent as
+   *  the MCP-Protocol-Version header on every later call. */
+  private negotiatedProtocolVersion: string | undefined;
   persona = "";
   toolItems: CapabilityItem[] = [];
   attached: Array<{ uri: string; name: string; text?: string }> = [];
@@ -176,6 +186,7 @@ export class LiveSession {
       profile.personas.find((p) => p.key === personaKey)?.label ?? personaKey;
     this.persona = personaKey;
     this.mcpSessionId = undefined;
+    this.negotiatedProtocolVersion = undefined;
     this.serverInstructions = undefined;
 
     this.store.append("user", {
@@ -190,6 +201,16 @@ export class LiveSession {
     const result = rpcResult(init.responseFrame);
     if (init.ok && result) {
       this.mcpSessionId = init.mcpSessionId;
+      this.negotiatedProtocolVersion = init.negotiatedProtocolVersion;
+      // The handshake-completing frame the proxy sent on our behalf —
+      // logged so the wire story is complete.
+      if (init.initializedFrame !== undefined) {
+        this.store.append("app", {
+          type: "rpc.notification",
+          method: "notifications/initialized",
+          raw: init.initializedFrame,
+        });
+      }
       const info = result.serverInfo as { name: string; version: string };
       this.serverInstructions =
         typeof result.instructions === "string" && result.instructions.trim() !== ""
@@ -464,6 +485,7 @@ export class LiveSession {
           persona: this.persona,
           op,
           mcpSessionId: this.mcpSessionId,
+          protocolVersion: this.negotiatedProtocolVersion,
           requestId,
         }),
       });
@@ -500,22 +522,58 @@ export class LiveSession {
       });
     }
 
+    const reqId = res.requestFrame?.id !== undefined ? String(res.requestFrame.id) : undefined;
     this.store.append("app", {
       type: "rpc.request",
-      requestId: res.requestFrame?.id !== undefined ? String(res.requestFrame.id) : undefined,
+      requestId: reqId,
       method: res.requestFrame?.method,
       raw: res.requestFrame,
     });
-    this.store.append("server", {
-      type: "rpc.response",
-      requestId: res.requestFrame?.id !== undefined ? String(res.requestFrame.id) : undefined,
-      raw: res.responseFrame,
-      http: {
-        status: res.httpStatus ?? 0,
-        headers: res.headers ?? {},
-        sse: res.sse ?? false,
-      },
-    });
+    // Walk every frame the body carried, in wire order, appending each as
+    // its true type — interleaved notifications land where they arrived.
+    const http = {
+      status: res.httpStatus ?? 0,
+      headers: res.headers ?? {},
+      sse: res.sse ?? false,
+    };
+    const entries = res.ordered ?? [];
+    let sawResponse = false;
+    for (const entry of entries) {
+      const f = entry.frame as { id?: unknown; method?: unknown } | null;
+      if (entry.kind === "response") {
+        sawResponse = true;
+        this.store.append("server", { type: "rpc.response", requestId: reqId, raw: entry.frame, http });
+      } else if (entry.kind === "server-request") {
+        this.store.append("server", {
+          type: "rpc.request",
+          requestId: f?.id !== undefined ? String(f.id) : undefined,
+          method: typeof f?.method === "string" ? f.method : undefined,
+          raw: entry.frame,
+        });
+      } else if (entry.kind === "orphan-response") {
+        this.store.append("server", {
+          type: "rpc.response",
+          requestId: f?.id !== undefined ? String(f.id) : undefined,
+          raw: entry.frame,
+        });
+      } else {
+        // notification | unparseable — both preserved as notifications.
+        this.store.append("server", {
+          type: "rpc.notification",
+          method: typeof f?.method === "string" ? f.method : undefined,
+          raw: entry.frame,
+        });
+      }
+    }
+    // Empty or frameless bodies (e.g. 202s) still log the exchange.
+    if (!sawResponse) {
+      this.store.append("server", {
+        type: "rpc.response",
+        requestId: reqId,
+        raw: res.responseFrame ?? null,
+        http,
+      });
+    }
 
     const err = rpcError(res.responseFrame);
     if (err) {
