@@ -27,10 +27,24 @@ export type ResolvedAuth =
   | { type: "bearer"; personas: BearerPersona[] }
   | { type: "oauth-client-credentials"; tokenUrl: string; personas: OauthPersona[] };
 
+export type ResolvedTransport =
+  | { kind: "streamable-http"; url: string }
+  | {
+      kind: "stdio";
+      command: string;
+      args: string[];
+      cwd?: string;
+      env: Record<string, string>;
+      secretEnv: Record<string, string>;
+      /** Values to scrub from anything browser-visible (stderr excerpts):
+       *  resolved secretEnv values + every env-interpolated substitution. */
+      redact: string[];
+    };
+
 export interface ResolvedProfile {
   id: string;
   name: string;
-  transport: { kind: "streamable-http"; url: string };
+  transport: ResolvedTransport;
   protocolVersion: string;
   allowSelfSigned: boolean;
   auth: ResolvedAuth;
@@ -42,12 +56,13 @@ export interface PublicPersona {
   scope?: string;
 }
 
-/** Browser-facing shape — never carries tokenUrl, tokens, or secrets. */
+/** Browser-facing shape — never carries tokenUrl, tokens, secrets, or
+ *  stdio args/env (stdio display is the command basename only). */
 export interface PublicProfile {
   id: string;
   name: string;
   mcpUrl: string;
-  transport: "streamable-http";
+  transport: "streamable-http" | "stdio";
   authType: ResolvedAuth["type"];
   personas: PublicPersona[];
 }
@@ -57,6 +72,10 @@ export const DEFAULT_PERSONA_KEY = "default";
 
 const ENV_REF = /\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g;
 const PURE_SECRET_REF = /^\$\{[A-Za-z_][A-Za-z0-9_]*\}$/;
+/** Names that mark a value as secret material — banned outside secretEnv
+ *  in stdio fields (the config file is tracked in git; argv is visible to
+ *  process listings regardless of redaction). */
+const SECRET_NAME = /SECRET|TOKEN|PASSWORD|PASSWD|APIKEY|API_KEY|CREDENTIAL/i;
 
 const PersonaBase = { key: z.string().min(1), label: z.string().min(1) };
 
@@ -82,10 +101,22 @@ const RawAuthSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+const RawTransportSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("streamable-http"), url: z.string().min(1) }),
+  z.object({
+    kind: z.literal("stdio"),
+    command: z.string().min(1),
+    args: z.array(z.string()).default([]),
+    cwd: z.string().min(1).optional(),
+    env: z.record(z.string(), z.string()).default({}),
+    secretEnv: z.record(z.string(), z.string()).default({}),
+  }),
+]);
+
 const RawProfileSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "lowercase alphanumeric + dashes"),
   name: z.string().min(1),
-  transport: z.object({ kind: z.literal("streamable-http"), url: z.string().min(1) }),
+  transport: RawTransportSchema,
   protocolVersion: z.string().min(1).default("2025-06-18"),
   allowSelfSigned: z.union([z.boolean(), z.string()]).optional(),
   auth: RawAuthSchema,
@@ -100,6 +131,13 @@ const RawConfigSchema = z
         ctx.addIssue({ code: "custom", path: ["profiles", i, "id"], message: `duplicate profile id "${p.id}"` });
       }
       ids.add(p.id);
+      if (p.transport.kind === "stdio" && p.auth.type !== "none") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["profiles", i, "auth", "type"],
+          message: `profile "${p.id}": stdio transport requires auth type "none" — identity goes in command args, secrets in secretEnv`,
+        });
+      }
       if (p.auth.type === "none") return;
       const keys = new Set<string>();
       p.auth.personas.forEach((persona, j) => {
@@ -140,6 +178,82 @@ function resolveSecret(value: string, env: Env, path: string, errors: string[]):
     return "";
   }
   return v;
+}
+
+/** stdio fields are non-secret by contract: no `:-` defaults (a default
+ *  is a literal in tracked config) and no secret-like variable names —
+ *  secrets flow through secretEnv only. Every substituted value is
+ *  recorded for stderr redaction. */
+function interpolateStdio(
+  value: string,
+  env: Env,
+  path: string,
+  errors: string[],
+  redact: string[],
+): string {
+  return value.replace(ENV_REF, (_m, name: string, fallback: string | undefined) => {
+    if (fallback !== undefined) {
+      errors.push(`${path}: \${VAR:-default} is not allowed in stdio fields`);
+      return "";
+    }
+    if (SECRET_NAME.test(name)) {
+      errors.push(`${path}: secret-like env var ${name} — use transport.secretEnv`);
+      return "";
+    }
+    const v = env[name];
+    if (v === undefined) {
+      errors.push(`${path}: missing env var ${name}`);
+      return "";
+    }
+    redact.push(v);
+    return v;
+  });
+}
+
+type RawProfile = z.infer<typeof RawProfileSchema>;
+
+function resolveTransport(p: RawProfile, env: Env, errors: string[]): ResolvedTransport {
+  const at = (field: string) => `profile "${p.id}" ${field}`;
+  if (p.transport.kind === "streamable-http") {
+    return {
+      kind: "streamable-http",
+      url: interpolate(p.transport.url, env, at("transport.url"), errors),
+    };
+  }
+  const t = p.transport;
+  const redact: string[] = [];
+  const args = t.args.map((a, i) => {
+    const opt = a.match(/^(--?[^=]+)=/);
+    if (opt && SECRET_NAME.test(opt[1])) {
+      errors.push(
+        `${at(`transport.args[${i}]`)}: secret-like option "${opt[1]}" — argv is visible to process listings; use secretEnv`,
+      );
+    }
+    return interpolateStdio(a, env, at(`transport.args[${i}]`), errors, redact);
+  });
+  const childEnv: Record<string, string> = {};
+  for (const [k, v] of Object.entries(t.env)) {
+    if (SECRET_NAME.test(k)) {
+      errors.push(`${at(`transport.env.${k}`)}: secret-like env key — use transport.secretEnv`);
+      continue;
+    }
+    childEnv[k] = interpolateStdio(v, env, at(`transport.env.${k}`), errors, redact);
+  }
+  const secretEnv: Record<string, string> = {};
+  for (const [k, v] of Object.entries(t.secretEnv)) {
+    const resolved = resolveSecret(v, env, at(`transport.secretEnv.${k}`), errors);
+    secretEnv[k] = resolved;
+    if (resolved !== "") redact.push(resolved);
+  }
+  return {
+    kind: "stdio",
+    command: interpolateStdio(t.command, env, at("transport.command"), errors, redact),
+    args,
+    cwd: t.cwd === undefined ? undefined : interpolateStdio(t.cwd, env, at("transport.cwd"), errors, redact),
+    env: childEnv,
+    secretEnv,
+    redact,
+  };
 }
 
 function coerceBool(value: string | boolean | undefined): boolean {
@@ -191,10 +305,7 @@ export function parseProfilesConfig(raw: unknown, env: Env): ResolvedProfile[] {
     return {
       id: p.id,
       name: interpolate(p.name, env, at("name"), errors),
-      transport: {
-        kind: p.transport.kind,
-        url: interpolate(p.transport.url, env, at("transport.url"), errors),
-      },
+      transport: resolveTransport(p, env, errors),
       protocolVersion: p.protocolVersion,
       allowSelfSigned: coerceBool(
         typeof p.allowSelfSigned === "string"
@@ -227,7 +338,12 @@ export function publicProfiles(profiles: ResolvedProfile[]): PublicProfile[] {
   return profiles.map((p) => ({
     id: p.id,
     name: p.name,
-    mcpUrl: p.transport.url,
+    // stdio display is the command basename ONLY — args/env are
+    // deployment-local detail and must never reach the browser.
+    mcpUrl:
+      p.transport.kind === "stdio"
+        ? `stdio: ${p.transport.command.split(/[\\/]/).pop() ?? p.transport.command}`
+        : p.transport.url,
     transport: p.transport.kind,
     authType: p.auth.type,
     personas: publicPersonas(p.auth),

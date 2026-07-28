@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyFrames, parseMcpBody } from "@/lib/sse";
+import { classifyFrames, classifyUnsolicited, parseMcpBody } from "@/lib/sse";
 
 const SSE = "text/event-stream; charset=utf-8";
 
@@ -112,5 +112,29 @@ describe("classifyFrames", () => {
     const { response: r, ordered } = classifyFrames([note], "r-1");
     expect(r).toBeNull();
     expect(ordered.map((e) => e.kind)).toEqual(["notification"]);
+  });
+
+  it("strict mode never falls back: wrong-id frames stay orphans", () => {
+    const wrongId = { jsonrpc: "2.0", id: "other", result: {} };
+    const { response: r, ordered } = classifyFrames([wrongId], "r-1", { fallback: false });
+    expect(r).toBeNull();
+    expect(ordered.map((e) => e.kind)).toEqual(["orphan-response"]);
+  });
+});
+
+describe("classifyUnsolicited", () => {
+  it("classifies by shape only — nothing becomes a response", () => {
+    const frames = [
+      { jsonrpc: "2.0", method: "notifications/message", params: {} },
+      { jsonrpc: "2.0", id: "s-1", method: "sampling/createMessage", params: {} },
+      { jsonrpc: "2.0", id: "x", result: {} },
+      { unparseable: "{oops" },
+    ];
+    expect(classifyUnsolicited(frames).map((e) => e.kind)).toEqual([
+      "notification",
+      "server-request",
+      "orphan-response",
+      "unparseable",
+    ]);
   });
 });

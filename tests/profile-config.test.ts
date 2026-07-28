@@ -42,6 +42,7 @@ function parse(profiles: unknown[], env: Record<string, string | undefined> = EN
 describe("parseProfilesConfig", () => {
   it("resolves an oauth profile with env interpolation and defaults", () => {
     const [p] = parse([oauthProfile()]);
+    if (p.transport.kind !== "streamable-http") throw new Error("expected http");
     expect(p.transport.url).toBe("https://example.test/mcp");
     expect(p.protocolVersion).toBe("2025-06-18");
     expect(p.allowSelfSigned).toBe(false);
@@ -115,6 +116,73 @@ describe("parseProfilesConfig", () => {
   });
 });
 
+describe("stdio transport config", () => {
+  function stdioProfile(transportOver: Record<string, unknown> = {}, over: Record<string, unknown> = {}) {
+    return {
+      id: "stdio-p",
+      name: "Stdio",
+      transport: { kind: "stdio", command: "node", args: ["server.mjs"], ...transportOver },
+      auth: { type: "none" },
+      ...over,
+    };
+  }
+
+  it("resolves a valid stdio profile, interpolating and recording redactions", () => {
+    const [p] = parse([
+      stdioProfile({ args: ["${MCP_URL}"], env: { FLAG: "on" }, secretEnv: { KEY: "${RO_SECRET}" } }),
+    ]);
+    if (p.transport.kind !== "stdio") throw new Error("expected stdio");
+    expect(p.transport.args).toEqual([ENV.MCP_URL]);
+    expect(p.transport.secretEnv.KEY).toBe(ENV.RO_SECRET);
+    expect(p.transport.redact).toContain(ENV.MCP_URL);
+    expect(p.transport.redact).toContain(ENV.RO_SECRET);
+  });
+
+  it("requires auth none for stdio", () => {
+    expect(() =>
+      parse([
+        stdioProfile(
+          {},
+          {
+            auth: {
+              type: "oauth-client-credentials",
+              tokenUrl: "${TOKEN_URL}",
+              personas: [
+                { key: "a", label: "A", clientId: "c", clientSecret: "${RO_SECRET}", scope: "s" },
+              ],
+            },
+          },
+        ),
+      ]),
+    ).toThrow(/stdio transport requires auth type "none"/);
+  });
+
+  it("rejects ${VAR:-default} in stdio fields", () => {
+    expect(() => parse([stdioProfile({ args: ["${MISSING:-fallback}"] })])).toThrow(
+      /\$\{VAR:-default\} is not allowed in stdio fields/,
+    );
+  });
+
+  it("rejects secret-like env var names outside secretEnv", () => {
+    expect(() => parse([stdioProfile({ args: ["${RO_SECRET}"] })])).toThrow(
+      /secret-like env var RO_SECRET/,
+    );
+  });
+
+  it("rejects secret-like env keys and literal secret-like args", () => {
+    expect(() => parse([stdioProfile({ env: { API_KEY: "x" } })])).toThrow(/secret-like env key/);
+    expect(() => parse([stdioProfile({ args: ["--token=literal"] })])).toThrow(
+      /secret-like option "--token"/,
+    );
+  });
+
+  it("rejects literal secretEnv values", () => {
+    expect(() => parse([stdioProfile({ secretEnv: { KEY: "hunter2" } })])).toThrow(
+      /must be a pure \$\{ENV_VAR\} reference/,
+    );
+  });
+});
+
 describe("publicProfiles", () => {
   it("never leaks secrets, tokens, or the token endpoint", () => {
     const resolved: ResolvedProfile[] = parse([
@@ -132,6 +200,33 @@ describe("publicProfiles", () => {
     expect(json).not.toContain("clientSecret");
     expect(json).not.toContain("tokenUrl");
     expect(json).not.toContain(ENV.TOKEN_URL);
+  });
+
+  it("maps stdio profiles to a basename-only display with no args or env", () => {
+    const [pub] = publicProfiles(
+      parse([
+        {
+          id: "drush",
+          name: "DKAN stdio",
+          transport: {
+            kind: "stdio",
+            command: "/usr/local/bin/ddev",
+            args: ["drush", "dkan-mcp-server:serve", "--user=mcp_writer"],
+            cwd: "/sites/dkan",
+            env: { MY_FLAG: "on" },
+            secretEnv: { CHILD_KEY: "${RO_SECRET}" },
+          },
+          auth: { type: "none" },
+        },
+      ]),
+    );
+    expect(pub.mcpUrl).toBe("stdio: ddev");
+    expect(pub.transport).toBe("stdio");
+    const json = JSON.stringify(pub);
+    expect(json).not.toContain("dkan-mcp-server:serve");
+    expect(json).not.toContain("mcp_writer");
+    expect(json).not.toContain("MY_FLAG");
+    expect(json).not.toContain(ENV.RO_SECRET);
   });
 
   it("gives a no-auth profile the implicit default persona", () => {
