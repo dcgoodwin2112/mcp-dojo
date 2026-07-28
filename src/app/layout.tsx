@@ -12,10 +12,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const description =
+  "A practice space for the Model Context Protocol — explore MCP servers hands-on and watch every exchange. Event log, timeline, replay.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://mcpdojo.dev"),
   title: "MCP Dojo",
-  description:
-    "A practice space for the Model Context Protocol — explore MCP servers hands-on and watch every exchange. Event log, timeline, replay.",
+  description,
+  openGraph: {
+    title: "MCP Dojo",
+    description,
+    url: "https://mcpdojo.dev",
+    siteName: "MCP Dojo",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "MCP Dojo",
+    description,
+  },
 };
 
 export default function RootLayout({

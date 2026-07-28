@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:static": "NEXT_PUBLIC_REPLAY_ONLY=1 next build && tsx scripts/check-static-out.ts",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

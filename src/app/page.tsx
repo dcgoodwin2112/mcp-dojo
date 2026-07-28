@@ -6,11 +6,13 @@ import { RECORDINGS } from "@/lib/fixtures";
 import { LiveView } from "@/components/LiveView";
 import { Logo } from "@/components/Logo";
 import { ReplayView } from "@/components/ReplayView";
+import { RunLocallyCard } from "@/components/RunLocallyCard";
+import { REPLAY_ONLY } from "@/lib/replay-only";
 
 type Mode = "live" | "replay";
 
 export default function Home() {
-  const [mode, setMode] = useState<Mode>("live");
+  const [mode, setMode] = useState<Mode>(REPLAY_ONLY ? "replay" : "live");
   const [replayLog, setReplayLog] = useState<EventLog | null>(null);
   const [present, setPresent] = useState(false);
 
@@ -75,15 +77,19 @@ export default function Home() {
           ✕ Esc
         </button>
       )}
-      <div className={mode === "live" ? "flex min-h-0 flex-1" : "hidden"}>
-        <LiveView
-          present={present}
-          onReplay={(log) => {
-            setReplayLog(log);
-            setMode("replay");
-          }}
-        />
-      </div>
+      {REPLAY_ONLY ? (
+        mode === "live" && <RunLocallyCard />
+      ) : (
+        <div className={mode === "live" ? "flex min-h-0 flex-1" : "hidden"}>
+          <LiveView
+            present={present}
+            onReplay={(log) => {
+              setReplayLog(log);
+              setMode("replay");
+            }}
+          />
+        </div>
+      )}
       {mode === "replay" && (
         <ReplayView log={replayLog ?? RECORDINGS[0].log} present={present} />
       )}
