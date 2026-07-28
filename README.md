@@ -1,12 +1,12 @@
-# MCP Lens
+# MCP Dojo
 
-A teaching lens for the Model Context Protocol. Server-agnostic MCP demo
-client for the talk "MCP from Concept to Demo: An Open Data Example with
-DKAN" (Drupal AI Learners Club, Aug 21, 2026). Teaches MCP's three
-primitives by making the control distinction visible: tools are
-model-controlled, prompts are user-controlled, resources are app-controlled.
-(Formerly named "MCP Inspector"; renamed to avoid colliding with the
-official debugging tool of that name.)
+A practice space for the Model Context Protocol — connect to a server,
+explore its tools, resources, and prompts hands-on, and watch every
+exchange. Server-agnostic; teaches MCP's three primitives by making the
+control distinction visible: tools are model-controlled, prompts are
+user-controlled, resources are app-controlled. (Formerly named
+"MCP Inspector"; renamed to avoid colliding with the official debugging
+tool of that name.)
 
 Plan and architecture: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).
 
@@ -23,8 +23,10 @@ Plan and architecture: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-pla
 
 ## Setup
 
-Requires a running DKAN site with `dkan_mcp_server` + the simple_oauth stack
-and two `client_credentials` consumers (see the plan's provisioning checklist).
+Replay mode needs no setup — run the dev server and pick a recording. Live
+mode requires an MCP server; the shipped profile targets a DKAN site with
+`dkan_mcp_server` + the simple_oauth stack and two `client_credentials`
+consumers (see the plan's provisioning checklist).
 
 ```bash
 npm install

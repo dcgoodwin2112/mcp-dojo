@@ -1,8 +1,8 @@
 # Roadmap — learning-tool features
 
-Feature backlog from the 2026-07-23 research pass: how to grow the inspector
-from talk demo into an MCP learning tool. Ordering assumes the Aug 12 feature
-freeze and Aug 21 talk. Decision history: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).
+Feature backlog from the 2026-07-23 research pass: how to grow MCP Dojo from
+demo client into a fuller MCP learning tool.
+Decision history: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).
 
 ## Shipped
 
@@ -23,21 +23,34 @@ freeze and Aug 21 talk. Decision history: [mcp-inspector-handoff-plan.md](mcp-in
   sizes recorded on context.snapshot events — tool defs are the flat
   baseline, conversation is what grows)
 
-All pre-talk roadmap items are shipped.
+All initial roadmap items are shipped.
 
-## After the talk
+## Backlog
+
+From the 2026-07-27 research pass (spec-transition + hosting):
+
+- **Hosted replay-only deployment** — replay + goldens need no server,
+  OAuth, or API keys; deploy at mcpdojo.dev as the public entry point.
+- **Spec-transition ⓘ annotations** — mark cards teaching 2026-07-28-changed
+  behavior (initialize handshake and Mcp-Session-Id removed in the stateless
+  core; OAuth hardening) via `spec-notes.ts`.
+- **Tasks over DKAN harvest/import** — the 2026-07-28 Tasks extension fits
+  DKAN's genuinely long-running ops (`run_harvest`, `import_resource`);
+  cross-repo; subsumes a notifications/progress pane.
+
+Earlier backlog:
 
 - **Guided lesson mode** — "Learn" tab with checkpoints verified against the
   live log. The flagship conversion from demo to tutorial.
-- **Authored fixtures for sampling / elicitation** — narrated synthetic
-  recordings for primitives DKAN doesn't implement; insulated from the
-  2026-07-28 spec churn (multi-round-trip requests replace server-initiated
-  elicitation/sampling).
+- **Authored elicitation fixtures** — narrated synthetic recordings for
+  flows DKAN doesn't implement, targeting the final 2026-07-28 spec's
+  multi-round-trip `InputRequiredResult` shape (sampling is deprecated
+  there; no fixture for it).
 - **Challenge mode** — log-verified exercises ("trigger a 403", "answer
   without search_datasets").
 - **Session export** — annotated markdown writeup of any session.
-- **Real elicitation/logging in dkan_mcp_server** — cross-repo; wait for the
-  2026-07-28 spec to settle.
+- **Real elicitation in dkan_mcp_server** — cross-repo; the 2026-07-28 spec
+  is final (protocol logging is deprecated in it — dropped from this item).
 - **Multi-server composition** — namespaced tools from two servers; large
   proxy/profile rework.
 - Deferred a11y: aria-live timeline region, keyboard-resizable drag handles.

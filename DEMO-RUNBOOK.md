@@ -1,6 +1,7 @@
-# Demo Runbook — Aug 21, 2026 (Zoom)
+# Demo Runbook — live presentation
 
-Operational script for the talk. Content/narrative: see the study guide;
+Operational script for presenting the golden demo. Content/narrative: see
+the study guide;
 architecture: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).
 
 ## Pre-flight (do 30+ min before)
@@ -62,7 +63,7 @@ Useful id (Florida Bike Lanes): `cedcd327-4e5d-43f9-8eb1-c11850fa7c55`
 - **Session wedged** → "New session" (fresh log) — takes ~2 s.
 - **Token expiry mid-demo** → nothing to do; re-mint is automatic and shows as
   a normal auth event (rehearsed 2026-07-23).
-- **DKAN site down** → replay-only talk: the golden covers every step.
+- **DKAN site down** → replay-only presentation: the golden covers every step.
 
 ## Keys
 

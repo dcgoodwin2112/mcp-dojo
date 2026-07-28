@@ -35,7 +35,7 @@ export default function Home() {
       {!present && (
         <header className="flex shrink-0 items-center gap-3 border-b border-zinc-200 py-2.5 dark:border-zinc-800">
           <Logo className="size-7 shrink-0" />
-          <h1 className="text-lg font-semibold">MCP Lens</h1>
+          <h1 className="text-lg font-semibold">MCP Dojo</h1>
           <div className="flex rounded-md border border-zinc-300 p-0.5 dark:border-zinc-700">
             {(["live", "replay"] as const).map((m) => (
               <button

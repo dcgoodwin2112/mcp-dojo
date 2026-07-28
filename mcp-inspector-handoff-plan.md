@@ -1,4 +1,8 @@
-# MCP Lens (formerly MCP Inspector) — Project Plan (revised)
+# MCP Dojo (formerly MCP Inspector) — Project Plan (revised)
+
+> Historical planning document from the original conference-demo phase
+> (July–Aug 2026), kept as the decision record. Current status lives in
+> [README.md](README.md) and [ROADMAP.md](ROADMAP.md).
 
 **Purpose:** Demo client for "MCP from Concept to Demo: An Open Data Example with DKAN"
 (Drupal AI Learners Club, Aug 21, 2026). Teaches MCP's three primitives — tools,
