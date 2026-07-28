@@ -76,6 +76,7 @@ export interface ToolOutcome {
 
 export class LiveSession {
   private mcpSessionId: string | undefined;
+  private profileId = "";
   persona = "";
   toolItems: CapabilityItem[] = [];
   attached: Array<{ uri: string; name: string; text?: string }> = [];
@@ -154,11 +155,12 @@ export class LiveSession {
     this.attached = [];
     this.disabledTools.clear();
     this.descriptionOverrides.clear();
+    this.profileId = profile.id;
     this.store.append("app", {
       type: "session.started",
       profile: profile.name,
       serverUrl: profile.mcpUrl,
-      transport: "streamable-http",
+      transport: profile.transport,
       mode: "live",
     });
     await this.initPersona(profile, personaKey);
@@ -458,6 +460,7 @@ export class LiveSession {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          profileId: this.profileId,
           persona: this.persona,
           op,
           mcpSessionId: this.mcpSessionId,

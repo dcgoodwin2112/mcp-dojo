@@ -1,73 +1,39 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import {
+  parseProfilesConfig,
+  publicProfiles,
+  type PublicProfile,
+  type ResolvedProfile,
+} from "./profile-config";
+
 /**
- * Connection profiles — SERVER-SIDE ONLY (holds client secrets from
- * .env.local). The browser gets PublicProfile via GET /api/profile; secrets
- * and tokens never leave the server.
+ * Profile registry — SERVER-SIDE ONLY (resolved profiles hold secrets from
+ * .env.local). Profiles are declared in profiles.config.json; secrets enter
+ * via ${ENV_VAR} interpolation. The browser gets PublicProfile[] via
+ * GET /api/profile — secrets and tokens never leave the server.
  */
 
-export interface PersonaConfig {
-  key: string;
-  label: string;
-  clientId: string;
-  clientSecret: string;
-  scope: string;
+export type { PublicPersona, PublicProfile, ResolvedProfile } from "./profile-config";
+
+let cache: ResolvedProfile[] | null = null;
+
+function load(): ResolvedProfile[] {
+  const file = path.join(process.cwd(), "profiles.config.json");
+  return parseProfilesConfig(JSON.parse(readFileSync(file, "utf8")), process.env);
 }
 
-export interface ConnectionProfile {
-  name: string;
-  mcpUrl: string;
-  tokenUrl: string;
-  allowSelfSigned: boolean;
-  personas: Record<string, PersonaConfig>;
+export function getProfiles(): ResolvedProfile[] {
+  // Re-read per call in dev so config edits don't require a restart.
+  if (process.env.NODE_ENV === "development") return load();
+  if (cache === null) cache = load();
+  return cache;
 }
 
-export interface PublicPersona {
-  key: string;
-  label: string;
-  scope: string;
+export function getProfileById(id: string): ResolvedProfile | undefined {
+  return getProfiles().find((p) => p.id === id);
 }
 
-export interface PublicProfile {
-  name: string;
-  mcpUrl: string;
-  personas: PublicPersona[];
-}
-
-function env(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env var ${name} — see .env.local`);
-  return v;
-}
-
-export function getProfile(): ConnectionProfile {
-  return {
-    name: process.env.DKAN_PROFILE_NAME ?? "DKAN demo site",
-    mcpUrl: env("DKAN_MCP_URL"),
-    tokenUrl: env("DKAN_OAUTH_TOKEN_URL"),
-    allowSelfSigned: process.env.DKAN_ALLOW_SELF_SIGNED === "1",
-    personas: {
-      "read-only": {
-        key: "read-only",
-        label: "Read-only",
-        clientId: env("PERSONA_READONLY_CLIENT_ID"),
-        clientSecret: env("PERSONA_READONLY_CLIENT_SECRET"),
-        scope: env("PERSONA_READONLY_SCOPE"),
-      },
-      editor: {
-        key: "editor",
-        label: "Editor",
-        clientId: env("PERSONA_EDITOR_CLIENT_ID"),
-        clientSecret: env("PERSONA_EDITOR_CLIENT_SECRET"),
-        scope: env("PERSONA_EDITOR_SCOPE"),
-      },
-    },
-  };
-}
-
-export function getPublicProfile(): PublicProfile {
-  const p = getProfile();
-  return {
-    name: p.name,
-    mcpUrl: p.mcpUrl,
-    personas: Object.values(p.personas).map(({ key, label, scope }) => ({ key, label, scope })),
-  };
+export function getPublicProfiles(): PublicProfile[] {
+  return publicProfiles(getProfiles());
 }

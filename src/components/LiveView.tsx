@@ -54,9 +54,20 @@ export function LiveView({
   if (loopRef.current === null) loopRef.current = new AgentLoop(sessionRef.current);
 
   const events = useEventLog(store);
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [profiles, setProfiles] = useState<PublicProfile[]>([]);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [persona, setPersona] = useState("read-only");
+  // Persona is always derived from the selected profile (first key by
+  // default) — a hard-coded initial value would send an unknown persona for
+  // any profile that doesn't define it.
+  const [persona, setPersona] = useState("");
+  /** Which profile the current live session was connected with — persona
+   *  switching only applies within it. */
+  const connectedProfileRef = useRef<string | null>(null);
+  const profile = useMemo(
+    () => profiles.find((p) => p.id === profileId) ?? null,
+    [profiles, profileId],
+  );
   const [busySource, setBusySource] = useState<BusySource | null>(null);
   const busy = busySource !== null;
   const [selection, setSelectionState] = useState<Selection>(null);
@@ -129,7 +140,13 @@ export function LiveView({
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then(setProfile)
+      .then((list: PublicProfile[]) => {
+        setProfiles(list);
+        if (list.length > 0) {
+          setProfileId(list[0].id);
+          setPersona(list[0].personas[0]?.key ?? "default");
+        }
+      })
       .catch((err) => setProfileError(String(err)));
   }, []);
 
@@ -173,9 +190,22 @@ export function LiveView({
     }
   }
 
+  function selectProfile(id: string) {
+    if (id === profileId) return;
+    const next = profiles.find((p) => p.id === id);
+    setProfileId(id);
+    setPersona(next?.personas[0]?.key ?? "default");
+    setSelection(null);
+  }
+
   function selectPersona(key: string) {
     setPersona(key);
-    if (connected && profile && key !== sessionRef.current!.persona) {
+    if (
+      connected &&
+      profile &&
+      connectedProfileRef.current === profile.id &&
+      key !== sessionRef.current!.persona
+    ) {
       setSelection(null);
       void run("connect", () => sessionRef.current!.switchPersona(profile, key));
     }
@@ -184,6 +214,7 @@ export function LiveView({
   function connect() {
     if (!profile) return;
     setSelection(null);
+    connectedProfileRef.current = profile.id;
     void run("connect", () => sessionRef.current!.connect(profile, persona));
   }
 
@@ -214,10 +245,25 @@ export function LiveView({
           )}
           {profile && (
             <>
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">{profile.name}</span>
+              {profiles.length > 1 ? (
+                <select
+                  value={profileId ?? ""}
+                  onChange={(e) => selectProfile(e.target.value)}
+                  aria-label="Connection profile"
+                  className="rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-sm text-zinc-500 dark:text-zinc-400">{profile.name}</span>
+              )}
               <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{profile.mcpUrl}</span>
               <span className="basis-full" />
-              {profile.personas.map((p) => (
+              {profile.personas.length > 1 && profile.personas.map((p) => (
                 <button
                   key={p.key}
                   type="button"

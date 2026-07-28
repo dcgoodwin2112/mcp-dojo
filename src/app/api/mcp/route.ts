@@ -1,18 +1,25 @@
-import { getProfile, type PersonaConfig } from "@/lib/profiles";
+import { fetch as undiciFetch, type Dispatcher } from "undici";
+import { getProfileById, type ResolvedProfile } from "@/lib/profiles";
+import type { OauthPersona } from "@/lib/profile-config";
+import { dispatchAuth } from "@/lib/proxy-auth";
+import { dispatcherFor } from "@/lib/self-signed";
 
 /**
- * Server-side MCP proxy. The browser sends {persona, op, mcpSessionId?}; this
- * route mints/caches OAuth tokens (client_credentials, re-mint before the
- * 300s expiry), forwards JSON-RPC to the profile's /mcp endpoint, parses SSE
- * responses, and returns raw frames + allowlisted HTTP metadata for the
- * client-side event log. Tokens and client secrets never reach the browser.
+ * Server-side MCP proxy. The browser sends {profileId, persona, op,
+ * mcpSessionId?}; this route resolves the profile, applies its auth
+ * strategy (none | bearer | oauth client_credentials with mint/cache),
+ * forwards JSON-RPC to the profile's endpoint, parses SSE responses, and
+ * returns raw frames + allowlisted HTTP metadata for the client-side event
+ * log. Tokens and client secrets never reach the browser.
  *
- * Hand-rolled JSON-RPC instead of the MCP SDK client: the inspector's whole
- * point is showing raw frames and transport metadata, which the SDK abstracts
- * away.
+ * Outbound calls go through undici's fetch so a self-signed profile's TLS
+ * dispatcher applies per request — never process-global.
+ *
+ * Hand-rolled JSON-RPC instead of the MCP SDK client: the app's whole
+ * point is showing raw frames and transport metadata, which the SDK
+ * abstracts away.
  */
 
-const PROTOCOL_VERSION = "2025-06-18";
 const TOKEN_EXPIRY_MARGIN_MS = 30_000;
 const HEADER_ALLOWLIST = ["content-type", "mcp-session-id", "www-authenticate"];
 
@@ -40,13 +47,15 @@ const tokenCache = new Map<string, CachedToken>();
 
 async function ensureToken(
   tokenUrl: string,
-  persona: PersonaConfig,
+  persona: OauthPersona,
+  cacheKey: string,
+  dispatcher: Dispatcher | undefined,
 ): Promise<{ token: CachedToken; minted: boolean }> {
-  const cached = tokenCache.get(persona.key);
+  const cached = tokenCache.get(cacheKey);
   if (cached && cached.expiresAtMs - TOKEN_EXPIRY_MARGIN_MS > Date.now()) {
     return { token: cached, minted: false };
   }
-  const resp = await fetch(tokenUrl, {
+  const resp = await undiciFetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -55,6 +64,7 @@ async function ensureToken(
       client_secret: persona.clientSecret,
       scope: persona.scope,
     }),
+    dispatcher,
   });
   if (!resp.ok) {
     throw new Error(`token mint failed: HTTP ${resp.status} ${await resp.text()}`);
@@ -67,11 +77,11 @@ async function ensureToken(
     expiresAtIso: new Date(expiresAtMs).toISOString(),
     scopes: persona.scope.split(" "),
   };
-  tokenCache.set(persona.key, token);
+  tokenCache.set(cacheKey, token);
   return { token, minted: true };
 }
 
-function buildFrame(op: Op, id: string): Record<string, unknown> {
+function buildFrame(op: Op, id: string, protocolVersion: string): Record<string, unknown> {
   switch (op.kind) {
     case "initialize":
       return {
@@ -79,7 +89,7 @@ function buildFrame(op: Op, id: string): Record<string, unknown> {
         id,
         method: "initialize",
         params: {
-          protocolVersion: PROTOCOL_VERSION,
+          protocolVersion,
           clientInfo: { name: "mcp-dojo", version: "0.1.0" },
           capabilities: {},
         },
@@ -137,61 +147,85 @@ function parseFrame(body: string, contentType: string): unknown {
 }
 
 async function forward(
-  mcpUrl: string,
-  accessToken: string,
+  profile: ResolvedProfile,
+  authorization: string | undefined,
   frame: Record<string, unknown>,
   mcpSessionId?: string,
 ) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json, text/event-stream",
-    Authorization: `Bearer ${accessToken}`,
   };
+  if (authorization) headers.Authorization = authorization;
   if (mcpSessionId) headers["Mcp-Session-Id"] = mcpSessionId;
   const t0 = performance.now();
-  const resp = await fetch(mcpUrl, { method: "POST", headers, body: JSON.stringify(frame) });
+  const resp = await undiciFetch(profile.transport.url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(frame),
+    dispatcher: dispatcherFor(profile),
+  });
   const body = await resp.text();
   const latencyMs = Math.round(performance.now() - t0);
-  const sse = (resp.headers.get("content-type") ?? "").includes("text/event-stream");
+  const respHeaders = new Headers(resp.headers as unknown as HeadersInit);
+  const sse = (respHeaders.get("content-type") ?? "").includes("text/event-stream");
   return {
     httpStatus: resp.status,
-    headers: allowlistHeaders(resp.headers),
+    headers: allowlistHeaders(respHeaders),
     sse,
-    responseFrame: parseFrame(body, resp.headers.get("content-type") ?? ""),
+    responseFrame: parseFrame(body, respHeaders.get("content-type") ?? ""),
     latencyMs,
   };
 }
 
 export async function POST(request: Request) {
-  const profile = getProfile();
-  if (profile.allowSelfSigned) {
-    // ddev's mkcert CA is trusted by the OS but not by Node's bundled store.
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-  }
-
-  const { persona: personaKey, op, mcpSessionId, requestId } = (await request.json()) as {
+  const { profileId, persona: personaKey, op, mcpSessionId, requestId } = (await request.json()) as {
+    profileId: string;
     persona: string;
     op: Op;
     mcpSessionId?: string;
     requestId?: string;
   };
-  const persona = profile.personas[personaKey];
-  if (!persona) {
-    return Response.json({ ok: false, transportError: `unknown persona: ${personaKey}` }, { status: 400 });
+
+  const profile = getProfileById(profileId);
+  if (!profile) {
+    return Response.json({ ok: false, transportError: `unknown profile: ${profileId}` }, { status: 400 });
+  }
+  const dispatch = dispatchAuth(profile, personaKey);
+  if ("error" in dispatch) {
+    return Response.json({ ok: false, transportError: dispatch.error }, { status: 400 });
   }
 
   try {
-    const { token, minted } = await ensureToken(profile.tokenUrl, persona);
-    const requestFrame = buildFrame(op, requestId ?? `r-${crypto.randomUUID().slice(0, 8)}`);
-    const result = await forward(profile.mcpUrl, token.accessToken, requestFrame, mcpSessionId);
+    let authorization: string | undefined;
+    let tokenInfo: { minted: true; scopes: string[]; expiresAt: string } | undefined;
+    if (dispatch.mode === "bearer") {
+      authorization = dispatch.authorization;
+    } else if (dispatch.mode === "oauth") {
+      const { token, minted } = await ensureToken(
+        dispatch.tokenUrl,
+        dispatch.persona,
+        dispatch.cacheKey,
+        dispatcherFor(profile),
+      );
+      authorization = `Bearer ${token.accessToken}`;
+      if (minted) tokenInfo = { minted: true, scopes: token.scopes, expiresAt: token.expiresAtIso };
+    }
+
+    const requestFrame = buildFrame(
+      op,
+      requestId ?? `r-${crypto.randomUUID().slice(0, 8)}`,
+      profile.protocolVersion,
+    );
+    const result = await forward(profile, authorization, requestFrame, mcpSessionId);
 
     let newMcpSessionId: string | undefined;
     if (op.kind === "initialize") {
       newMcpSessionId = result.headers["mcp-session-id"];
       // Complete the handshake; fire-and-forget notification frame.
       await forward(
-        profile.mcpUrl,
-        token.accessToken,
+        profile,
+        authorization,
         { jsonrpc: "2.0", method: "notifications/initialized" },
         newMcpSessionId,
       );
@@ -202,9 +236,7 @@ export async function POST(request: Request) {
       ...result,
       requestFrame,
       mcpSessionId: newMcpSessionId,
-      token: minted
-        ? { minted: true, scopes: token.scopes, expiresAt: token.expiresAtIso }
-        : undefined,
+      token: tokenInfo,
     });
   } catch (err) {
     return Response.json(

@@ -1,5 +1,12 @@
-import { getPublicProfile } from "@/lib/profiles";
+import { getPublicProfiles } from "@/lib/profiles";
 
 export async function GET() {
-  return Response.json(getPublicProfile());
+  try {
+    return Response.json(getPublicProfiles());
+  } catch (err) {
+    return Response.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
+  }
 }

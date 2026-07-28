@@ -1,0 +1,30 @@
+{
+  "profiles": [
+    {
+      "id": "dkan-demo",
+      "name": "${DKAN_PROFILE_NAME:-DKAN demo site}",
+      "transport": { "kind": "streamable-http", "url": "${DKAN_MCP_URL}" },
+      "allowSelfSigned": "${DKAN_ALLOW_SELF_SIGNED:-0}",
+      "auth": {
+        "type": "oauth-client-credentials",
+        "tokenUrl": "${DKAN_OAUTH_TOKEN_URL}",
+        "personas": [
+          {
+            "key": "read-only",
+            "label": "Read-only",
+            "clientId": "${PERSONA_READONLY_CLIENT_ID}",
+            "clientSecret": "${PERSONA_READONLY_CLIENT_SECRET}",
+            "scope": "${PERSONA_READONLY_SCOPE}"
+          },
+          {
+            "key": "editor",
+            "label": "Editor",
+            "clientId": "${PERSONA_EDITOR_CLIENT_ID}",
+            "clientSecret": "${PERSONA_EDITOR_CLIENT_SECRET}",
+            "scope": "${PERSONA_EDITOR_SCOPE}"
+          }
+        ]
+      }
+    }
+  ]
+}
