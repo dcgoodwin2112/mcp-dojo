@@ -13,7 +13,7 @@ architecture: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).
       warm ≈ 50 ms).
 - [ ] One agent question ("What datasets are here?") — confirms the Anthropic
       key and measures the day's model latency.
-- [ ] Replay tab: golden loads (148 events), plays to Step 1 pause.
+- [ ] Replay tab: golden loads (133 events), plays to Step 1 pause.
 - [ ] `{ } Raw JSON-RPC` OFF. Browser/OS notifications off. Press `p` to check
       presentation scale on the shared screen; `Esc` back.
 
