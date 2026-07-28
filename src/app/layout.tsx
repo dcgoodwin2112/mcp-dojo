@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MCP Dojo",
   description:
-    "Server-agnostic MCP demo client — event log, timeline, replay. Teaches tools, resources, and prompts.",
+    "A practice space for the Model Context Protocol — explore MCP servers hands-on and watch every exchange. Event log, timeline, replay.",
 };
 
 export default function RootLayout({

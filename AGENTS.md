@@ -6,7 +6,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # MCP Dojo — agent guide
 
-MCP demo client (Next.js 16 / React 19 / TS / Tailwind v4) for the DKAN talk.
+MCP teaching client (Next.js 16 / React 19 / TS / Tailwind v4): explore MCP
+servers hands-on, every exchange logged and replayable.
 Named "MCP Dojo" (formerly "MCP Inspector"); the local directory keeps the
 old name. Domains: mcpdojo.dev (primary), mcpdojo.app.
 User-facing docs: [README.md](README.md). Demo script: [DEMO-RUNBOOK.md](DEMO-RUNBOOK.md).
