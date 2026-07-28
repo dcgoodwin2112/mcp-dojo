@@ -30,6 +30,10 @@ tool. Decision history: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-pl
 - **P3 — stdio transport** (2026-07-28): config-declared child processes,
   minimal env, bounded FIFO sessions, verified against `ddev drush` and
   the reference server; [plans/p3-stdio-transport.md](plans/p3-stdio-transport.md)
+- **Hosted replay-only deployment** (2026-07-28): live at
+  [mcpdojo.dev](https://mcpdojo.dev) (Netlify static export; mcpdojo.app
+  301s); replay + Open log…, Live tab points to running locally;
+  [plans/hosted-replay-deployment.md](plans/hosted-replay-deployment.md)
 
 ## Connection & protocol (remaining)
 
@@ -48,8 +52,6 @@ tool. Decision history: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-pl
 
 ## Learning-tool backlog
 
-- **Hosted replay-only deployment** — replay + goldens need no server,
-  OAuth, or API keys; deploy at mcpdojo.dev as the public entry point.
 - **Spec-transition ⓘ annotations** — mark cards teaching
   2026-07-28-changed behavior via `spec-notes.ts`; pairs with P4.
 - **Guided lesson mode** — "Learn" tab with checkpoints verified against
