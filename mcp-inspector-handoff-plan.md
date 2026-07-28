@@ -1,4 +1,4 @@
-# MCP Inspector — Project Plan (revised)
+# MCP Lens (formerly MCP Inspector) — Project Plan (revised)
 
 **Purpose:** Demo client for "MCP from Concept to Demo: An Open Data Example with DKAN"
 (Drupal AI Learners Club, Aug 21, 2026). Teaches MCP's three primitives — tools,

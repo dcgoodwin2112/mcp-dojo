@@ -80,7 +80,7 @@ function buildFrame(op: Op, id: string): Record<string, unknown> {
         method: "initialize",
         params: {
           protocolVersion: PROTOCOL_VERSION,
-          clientInfo: { name: "mcp-inspector", version: "0.1.0" },
+          clientInfo: { name: "mcp-lens", version: "0.1.0" },
           capabilities: {},
         },
       };

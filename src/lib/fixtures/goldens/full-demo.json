@@ -55,7 +55,7 @@
         "params": {
           "protocolVersion": "2025-06-18",
           "clientInfo": {
-            "name": "mcp-inspector",
+            "name": "mcp-lens",
             "version": "0.1.0"
           },
           "capabilities": {}
@@ -7157,7 +7157,7 @@
         "params": {
           "protocolVersion": "2025-06-18",
           "clientInfo": {
-            "name": "mcp-inspector",
+            "name": "mcp-lens",
             "version": "0.1.0"
           },
           "capabilities": {}
@@ -11962,7 +11962,7 @@
         "params": {
           "protocolVersion": "2025-06-18",
           "clientInfo": {
-            "name": "mcp-inspector",
+            "name": "mcp-lens",
             "version": "0.1.0"
           },
           "capabilities": {}

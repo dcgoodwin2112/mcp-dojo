@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MCP Inspector",
+  title: "MCP Lens",
   description:
     "Server-agnostic MCP demo client — event log, timeline, replay. Teaches tools, resources, and prompts.",
 };
