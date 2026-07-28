@@ -50,6 +50,8 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
 | `src/app/api/mcp/route.ts` | auth dispatch + OAuth mint/cache + JSON-RPC forward; per-profile TLS via undici dispatcher |
 | `src/lib/sse.ts` | pure SSE body parsing + frame classification (every frame kept, wire order) |
 | `src/lib/mcp-frames.ts` | pure JSON-RPC frame/header builders (progressToken, MCP-Protocol-Version) |
+| `src/lib/stdio-manager.ts` | stdio session manager: child spawn (minimal env), per-session FIFO + reader, bounded buffers, redacted stderr; local single-Node only |
+| `src/lib/ndjson.ts` | pure newline-delimited-JSON chunk framing for stdio |
 | `src/app/api/agent/route.ts` | one Anthropic call per request (loop is client-side) |
 | `src/components/LiveView.tsx` | split layout, wiring, drawers |
 | `src/components/ContextInspector.tsx` | live context view + edits |

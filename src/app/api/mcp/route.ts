@@ -5,6 +5,7 @@ import { buildFrame, buildForwardHeaders, negotiatedVersion, type Op } from "@/l
 import { dispatchAuth } from "@/lib/proxy-auth";
 import { dispatcherFor } from "@/lib/self-signed";
 import { classifyFrames, parseMcpBody, type ClassifiedFrame } from "@/lib/sse";
+import { stdioCall, stdioClose, stdioInitialize } from "@/lib/stdio-manager";
 
 /**
  * Server-side MCP proxy. The browser sends {profileId, persona, op,
@@ -100,6 +101,9 @@ async function forward(
   ordered: ClassifiedFrame[];
   latencyMs: number;
 }> {
+  if (profile.transport.kind !== "streamable-http") {
+    throw new Error("forward() requires an http transport");
+  }
   const t0 = performance.now();
   const resp = await undiciFetch(profile.transport.url, {
     method: "POST",
@@ -129,6 +133,7 @@ export async function POST(request: Request) {
     persona: personaKey,
     op,
     mcpSessionId,
+    closeMcpSessionId,
     requestId,
     protocolVersion,
   } = (await request.json()) as {
@@ -136,9 +141,15 @@ export async function POST(request: Request) {
     persona: string;
     op: Op;
     mcpSessionId?: string;
+    /** Previous session to destroy on reconnect — processed before any
+     *  validation/dispatch so cleanup happens even if this request is
+     *  rejected, and regardless of the NEW profile's transport. */
+    closeMcpSessionId?: string;
     requestId?: string;
     protocolVersion?: string;
   };
+
+  if (closeMcpSessionId) stdioClose(closeMcpSessionId);
 
   const profile = getProfileById(profileId);
   if (!profile) {
@@ -147,6 +158,45 @@ export async function POST(request: Request) {
   const dispatch = dispatchAuth(profile, personaKey);
   if ("error" in dispatch) {
     return Response.json({ ok: false, transportError: dispatch.error }, { status: 400 });
+  }
+
+  const requestFrame = buildFrame(
+    op,
+    requestId ?? `r-${crypto.randomUUID().slice(0, 8)}`,
+    profile.protocolVersion,
+  );
+
+  if (profile.transport.kind === "stdio") {
+    try {
+      if (op.kind === "initialize") {
+        const r = await stdioInitialize(profile, personaKey, requestFrame);
+        return Response.json({
+          ok: r.responseFrame !== null,
+          responseFrame: r.responseFrame,
+          ordered: r.ordered,
+          unsolicited: r.unsolicited,
+          latencyMs: r.latencyMs,
+          requestFrame,
+          mcpSessionId: r.sessionId,
+          negotiatedProtocolVersion: negotiatedVersion(r.responseFrame, profile.protocolVersion),
+          initializedFrame: r.initializedFrame,
+        });
+      }
+      const r = await stdioCall(mcpSessionId, profileId, personaKey, requestFrame);
+      return Response.json({
+        ok: r.responseFrame !== null,
+        responseFrame: r.responseFrame,
+        ordered: r.ordered,
+        unsolicited: r.unsolicited,
+        latencyMs: r.latencyMs,
+        requestFrame,
+      });
+    } catch (err) {
+      return Response.json(
+        { ok: false, transportError: err instanceof Error ? err.message : String(err) },
+        { status: 502 },
+      );
+    }
   }
 
   try {
@@ -165,11 +215,6 @@ export async function POST(request: Request) {
       if (minted) tokenInfo = { minted: true, scopes: token.scopes, expiresAt: token.expiresAtIso };
     }
 
-    const requestFrame = buildFrame(
-      op,
-      requestId ?? `r-${crypto.randomUUID().slice(0, 8)}`,
-      profile.protocolVersion,
-    );
     // initialize carries the version in its body; later calls carry the
     // CLIENT-held negotiated version as a header.
     const result = await forward(

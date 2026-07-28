@@ -22,6 +22,10 @@ interface ProxyResult {
   responseFrame?: unknown;
   /** EVERY frame the response body carried, classified, in wire order. */
   ordered?: Array<{ kind: string; frame: unknown }>;
+  /** stdio only: frames that arrived BEFORE this request was written —
+   *  logged ahead of the rpc.request event to keep the log's order
+   *  faithful to the wire. */
+  unsolicited?: Array<{ kind: string; frame: unknown }>;
   latencyMs?: number;
   mcpSessionId?: string;
   /** initialize only: the server's negotiated protocol version and the
@@ -185,6 +189,9 @@ export class LiveSession {
     const personaLabel =
       profile.personas.find((p) => p.key === personaKey)?.label ?? personaKey;
     this.persona = personaKey;
+    // Capture before reset: the route destroys the old session (stdio
+    // child processes) before dispatching the new initialize.
+    const closeMcpSessionId = this.mcpSessionId;
     this.mcpSessionId = undefined;
     this.negotiatedProtocolVersion = undefined;
     this.serverInstructions = undefined;
@@ -195,7 +202,7 @@ export class LiveSession {
       label: personaLabel,
     });
 
-    const init = await this.call({ kind: "initialize" });
+    const init = await this.call({ kind: "initialize" }, undefined, closeMcpSessionId);
     if (init === null) return;
 
     const result = rpcResult(init.responseFrame);
@@ -474,6 +481,7 @@ export class LiveSession {
   private async call(
     op: Record<string, unknown>,
     requestId?: string,
+    closeMcpSessionId?: string,
   ): Promise<ProxyResult | null> {
     let res: ProxyResult;
     try {
@@ -485,6 +493,7 @@ export class LiveSession {
           persona: this.persona,
           op,
           mcpSessionId: this.mcpSessionId,
+          closeMcpSessionId,
           protocolVersion: this.negotiatedProtocolVersion,
           requestId,
         }),
@@ -523,25 +532,15 @@ export class LiveSession {
     }
 
     const reqId = res.requestFrame?.id !== undefined ? String(res.requestFrame.id) : undefined;
-    this.store.append("app", {
-      type: "rpc.request",
-      requestId: reqId,
-      method: res.requestFrame?.method,
-      raw: res.requestFrame,
-    });
-    // Walk every frame the body carried, in wire order, appending each as
-    // its true type — interleaved notifications land where they arrived.
-    const http = {
-      status: res.httpStatus ?? 0,
-      headers: res.headers ?? {},
-      sse: res.sse ?? false,
-    };
-    const entries = res.ordered ?? [];
-    let sawResponse = false;
-    for (const entry of entries) {
+    // http metadata is absent for stdio exchanges — the schema marks it
+    // optional, and its absence in the frames drawer IS the lesson.
+    const http =
+      res.httpStatus !== undefined
+        ? { status: res.httpStatus, headers: res.headers ?? {}, sse: res.sse ?? false }
+        : undefined;
+    const appendEntry = (entry: { kind: string; frame: unknown }, main: boolean) => {
       const f = entry.frame as { id?: unknown; method?: unknown } | null;
-      if (entry.kind === "response") {
-        sawResponse = true;
+      if (entry.kind === "response" && main) {
         this.store.append("server", { type: "rpc.response", requestId: reqId, raw: entry.frame, http });
       } else if (entry.kind === "server-request") {
         this.store.append("server", {
@@ -550,7 +549,7 @@ export class LiveSession {
           method: typeof f?.method === "string" ? f.method : undefined,
           raw: entry.frame,
         });
-      } else if (entry.kind === "orphan-response") {
+      } else if (entry.kind === "response" || entry.kind === "orphan-response") {
         this.store.append("server", {
           type: "rpc.response",
           requestId: f?.id !== undefined ? String(f.id) : undefined,
@@ -564,9 +563,22 @@ export class LiveSession {
           raw: entry.frame,
         });
       }
-    }
+    };
+    // stdio idle frames arrived BEFORE this request went out — log them
+    // first so the event log's order matches the wire's.
+    for (const entry of res.unsolicited ?? []) appendEntry(entry, false);
+    this.store.append("app", {
+      type: "rpc.request",
+      requestId: reqId,
+      method: res.requestFrame?.method,
+      raw: res.requestFrame,
+    });
+    // Walk every frame the body carried, in wire order, appending each as
+    // its true type — interleaved notifications land where they arrived.
+    const entries = res.ordered ?? [];
+    for (const entry of entries) appendEntry(entry, true);
     // Empty or frameless bodies (e.g. 202s) still log the exchange.
-    if (!sawResponse) {
+    if (!entries.some((e) => e.kind === "response")) {
       this.store.append("server", {
         type: "rpc.response",
         requestId: reqId,

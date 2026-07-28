@@ -42,6 +42,25 @@ no-auth server:
 }
 ```
 
+Local stdio servers work too (`auth` must be `none`; identity goes in
+args, secrets in `secretEnv` as `${ENV_VAR}` refs). stdio is a local-dev
+capability: sessions are child processes of the Next server, so it needs
+a single long-lived Node process. Example — DKAN over drush:
+
+```json
+{
+  "id": "dkan-stdio",
+  "name": "DKAN (stdio)",
+  "transport": {
+    "kind": "stdio",
+    "command": "ddev",
+    "args": ["drush", "dkan-mcp-server:serve"],
+    "cwd": "/path/to/dkan-site"
+  },
+  "auth": { "type": "none" }
+}
+```
+
 ```bash
 npm install
 cp .env.local.example .env.local   # fill in consumer secrets + Anthropic key
