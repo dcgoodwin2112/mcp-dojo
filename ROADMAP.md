@@ -21,24 +21,18 @@ tool. Decision history: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-pl
   "when things fail" legend section)
 - Context-growth meter (stacked bars per model call in the ⊞ Context drawer)
 - JSON syntax highlighting across request/response views (`JsonBlock`)
+- **P1 — Profile registry + auth strategies** (2026-07-28): declarative
+  `profiles.config.json`, auth `none`/`bearer`/`oauth-client-credentials`,
+  profile picker; [plans/p1-profile-registry.md](plans/p1-profile-registry.md)
+- **P2 — Honest streamable-HTTP** (2026-07-28): every SSE frame kept and
+  classified in wire order, `MCP-Protocol-Version` sent, progressToken;
+  [plans/p2-honest-streamable-http.md](plans/p2-honest-streamable-http.md)
+- **P3 — stdio transport** (2026-07-28): config-declared child processes,
+  minimal env, bounded FIFO sessions, verified against `ddev drush` and
+  the reference server; [plans/p3-stdio-transport.md](plans/p3-stdio-transport.md)
 
-## Connection & protocol (prioritized 2026-07-28)
+## Connection & protocol (remaining)
 
-The connection stack today is single-profile, mandatory OAuth
-client_credentials, HTTP-only, protocol pinned to 2025-06-18. These make the
-"server-agnostic" claim real, in dependency order:
-
-1. **P1 — Profile registry + auth strategies.** Config-file profile list
-   (env interpolation for secrets), per-profile auth: `none` | `bearer` |
-   `oauth-client-credentials`; personas become an arbitrary per-profile
-   list; profile picker UI; transport + protocolVersion fields plumbed.
-   Plan: [plans/p1-profile-registry.md](plans/p1-profile-registry.md).
-2. **P2 — Honest streamable-HTTP.** Keep every SSE frame from a POST body
-   (extras become notification events), send `MCP-Protocol-Version` after
-   initialize. Prerequisite for notifications/progress/Tasks UI.
-3. **P3 — stdio transport.** Server-side process manager; profile declares
-   command+args (config-file only, never UI-entered). First target:
-   `drush dkan-mcp-server:serve`; unlocks local reference servers.
 4. **P4 — Dual-version protocol (2026-07-28 spec).** Per-profile
    protocolVersion with two frame-builders: 2025-06-18 (handshake +
    Mcp-Session-Id) and the stateless core (`_meta` client info,
@@ -47,7 +41,8 @@ client_credentials, HTTP-only, protocol pinned to 2025-06-18. These make the
    adoption (mcp/sdk, Drupal contrib).
 5. **P5 — Tasks + notifications pane.** The 2026-07-28 Tasks extension over
    DKAN's genuinely long-running ops (`run_harvest`, `import_resource`);
-   cross-repo; needs P2.
+   cross-repo. P2's frame capture is in place; still needs semantic
+   timeline/progress UI and server-side Tasks support.
 6. **P6 — Multi-server composition.** Namespaced tools from two servers;
    cheaper after P4 (the stateless spec simplifies session handling).
 
