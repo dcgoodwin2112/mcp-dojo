@@ -1,12 +1,13 @@
-# MCP Lens
+# MCP Dojo
 
-A teaching lens for the Model Context Protocol. Server-agnostic MCP demo
-client for the talk "MCP from Concept to Demo: An Open Data Example with
-DKAN" (Drupal AI Learners Club, Aug 21, 2026). Teaches MCP's three
-primitives by making the control distinction visible: tools are
-model-controlled, prompts are user-controlled, resources are app-controlled.
-(Formerly named "MCP Inspector"; renamed to avoid colliding with the
-official debugging tool of that name.)
+A practice space for the Model Context Protocol — explore an MCP server
+hands-on and watch every exchange. Server-agnostic demo client for the talk
+"MCP from Concept to Demo: An Open Data Example with DKAN" (Drupal AI
+Learners Club, Aug 21, 2026). Teaches MCP's three primitives by making the
+control distinction visible: tools are model-controlled, prompts are
+user-controlled, resources are app-controlled. (Formerly named
+"MCP Inspector"; renamed to avoid colliding with the official debugging
+tool of that name.)
 
 Plan and architecture: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md).
 
