@@ -57,6 +57,9 @@ export default function Home() {
               </button>
             ))}
           </div>
+          <span className="hidden text-sm text-zinc-400 dark:text-zinc-500 lg:inline">
+            a practice space for the Model Context Protocol
+          </span>
           <button
             type="button"
             onClick={() => setPresent(true)}
@@ -68,14 +71,20 @@ export default function Home() {
         </header>
       )}
       {present && (
-        <button
-          type="button"
-          onClick={() => setPresent(false)}
-          title="Exit presentation (Esc)"
-          className="fixed right-3 top-3 z-30 rounded-full border border-zinc-300 bg-white/70 px-3 py-1 text-xs text-zinc-500 opacity-40 backdrop-blur transition-opacity hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-400"
-        >
-          ✕ Esc
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => setPresent(false)}
+            title="Exit presentation (Esc)"
+            className="fixed right-3 top-3 z-30 rounded-full border border-zinc-300 bg-white/70 px-3 py-1 text-xs text-zinc-500 opacity-40 backdrop-blur transition-opacity hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-400"
+          >
+            ✕ Esc
+          </button>
+          <div className="pointer-events-none fixed bottom-3 left-3 z-30 flex items-center gap-1.5 opacity-40">
+            <Logo className="size-4" />
+            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">mcpdojo.dev</span>
+          </div>
+        </>
       )}
       {REPLAY_ONLY ? (
         mode === "live" && <RunLocallyCard />
