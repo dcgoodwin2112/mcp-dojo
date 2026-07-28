@@ -4,6 +4,15 @@
  * response, mirroring the sequence diagram's semantics and actor palette
  * (sky app, emerald user, orange server). Also the favicon (src/app/icon.svg).
  */
+/** The bare ensō arc in currentColor — empty states and the busy spinner. */
+export function Enso({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" strokeLinecap="round" className={className} aria-hidden="true">
+      <path d="M26.88 10.93 A12 12 0 1 1 21.07 5.12" stroke="currentColor" strokeWidth="2.25" />
+    </svg>
+  );
+}
+
 export function Logo({ className }: { className?: string }) {
   return (
     <svg

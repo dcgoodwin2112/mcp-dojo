@@ -6,6 +6,7 @@ import { groupTimelineRows } from "@/lib/timeline-rows";
 import { formatClock } from "@/lib/ui";
 import { ActorBadge } from "./ActorBadge";
 import { EventCard } from "./EventCard";
+import { Enso } from "./Logo";
 
 /**
  * Pure rendering of a list of events — live mode and replay feed the same
@@ -58,7 +59,10 @@ export function Timeline({
     <div className="relative h-full min-h-0">
       <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto pr-1">
         {events.length === 0 ? (
-          <p className="py-16 text-center text-sm text-zinc-500 dark:text-zinc-400">{emptyHint}</p>
+          <div className="flex flex-col items-center gap-4 py-16">
+            <Enso className="size-16 text-zinc-200 dark:text-zinc-800" />
+            <p className="max-w-sm text-center text-sm text-zinc-500 dark:text-zinc-400">{emptyHint}</p>
+          </div>
         ) : (
           <ol className={`space-y-2 ${present ? "pb-32" : "pb-4"}`}>
             {rows.map((row, i) => {

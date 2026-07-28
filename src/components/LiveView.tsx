@@ -15,6 +15,7 @@ import { FramesDrawer } from "./FramesDrawer";
 import { CapabilityDiff } from "./CapabilityDiff";
 import { CapabilityPanel } from "./CapabilityPanel";
 import { Legend } from "./Legend";
+import { Enso } from "./Logo";
 import { ManualCall } from "./ManualCall";
 import { ResourceBrowser } from "./ResourceBrowser";
 import { SequenceDiagram } from "./SequenceDiagram";
@@ -293,6 +294,9 @@ export function LiveView({
                     ? "New session"
                     : "Connect"}
               </button>
+              {busy && (
+                <Enso className="size-5 shrink-0 animate-[spin_1.4s_linear_infinite] text-sky-500" />
+              )}
             </>
           )}
         </div>
