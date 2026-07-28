@@ -1,16 +1,25 @@
 import { fetch as undiciFetch, type Dispatcher } from "undici";
 import { getProfileById, type ResolvedProfile } from "@/lib/profiles";
 import type { OauthPersona } from "@/lib/profile-config";
+import { buildFrame, buildForwardHeaders, negotiatedVersion, type Op } from "@/lib/mcp-frames";
 import { dispatchAuth } from "@/lib/proxy-auth";
 import { dispatcherFor } from "@/lib/self-signed";
+import { classifyFrames, parseMcpBody, type ClassifiedFrame } from "@/lib/sse";
 
 /**
  * Server-side MCP proxy. The browser sends {profileId, persona, op,
- * mcpSessionId?}; this route resolves the profile, applies its auth
- * strategy (none | bearer | oauth client_credentials with mint/cache),
- * forwards JSON-RPC to the profile's endpoint, parses SSE responses, and
- * returns raw frames + allowlisted HTTP metadata for the client-side event
- * log. Tokens and client secrets never reach the browser.
+ * mcpSessionId?, protocolVersion?}; this route resolves the profile,
+ * applies its auth strategy (none | bearer | oauth client_credentials
+ * with mint/cache), forwards JSON-RPC to the profile's endpoint, parses
+ * the SSE-or-JSON body into EVERY frame it carries (classified, wire
+ * order preserved), and returns raw frames + allowlisted HTTP metadata
+ * for the client-side event log. Tokens and client secrets never reach
+ * the browser.
+ *
+ * The negotiated MCP-Protocol-Version header: for calls after initialize
+ * the CLIENT holds the negotiated version and supplies it per call; for
+ * the notifications/initialized follow-up (sent before the client sees
+ * the initialize result) the route derives it from the response frame.
  *
  * Outbound calls go through undici's fetch so a self-signed profile's TLS
  * dispatcher applies per request — never process-global.
@@ -22,19 +31,6 @@ import { dispatcherFor } from "@/lib/self-signed";
 
 const TOKEN_EXPIRY_MARGIN_MS = 30_000;
 const HEADER_ALLOWLIST = ["content-type", "mcp-session-id", "www-authenticate"];
-
-type Op =
-  | { kind: "initialize" }
-  | { kind: "tools/list" | "resources/list" | "resources/templates/list" | "prompts/list" }
-  | { kind: "tools/call"; name: string; args: Record<string, unknown> }
-  | { kind: "resources/read"; uri: string }
-  | { kind: "prompts/get"; name: string; args: Record<string, string> }
-  | {
-      kind: "completion/complete";
-      ref: { type: "ref/prompt"; name: string } | { type: "ref/resource"; uri: string };
-      argName: string;
-      value: string;
-    };
 
 interface CachedToken {
   accessToken: string;
@@ -81,50 +77,6 @@ async function ensureToken(
   return { token, minted: true };
 }
 
-function buildFrame(op: Op, id: string, protocolVersion: string): Record<string, unknown> {
-  switch (op.kind) {
-    case "initialize":
-      return {
-        jsonrpc: "2.0",
-        id,
-        method: "initialize",
-        params: {
-          protocolVersion,
-          clientInfo: { name: "mcp-dojo", version: "0.1.0" },
-          capabilities: {},
-        },
-      };
-    case "tools/call":
-      return {
-        jsonrpc: "2.0",
-        id,
-        method: "tools/call",
-        params: { name: op.name, arguments: op.args },
-      };
-    case "resources/read":
-      return { jsonrpc: "2.0", id, method: "resources/read", params: { uri: op.uri } };
-    case "prompts/get":
-      return {
-        jsonrpc: "2.0",
-        id,
-        method: "prompts/get",
-        params: { name: op.name, arguments: op.args },
-      };
-    case "completion/complete":
-      return {
-        jsonrpc: "2.0",
-        id,
-        method: "completion/complete",
-        params: {
-          ref: op.ref,
-          argument: { name: op.argName, value: op.value },
-        },
-      };
-    default:
-      return { jsonrpc: "2.0", id, method: op.kind, params: {} };
-  }
-}
-
 function allowlistHeaders(headers: Headers): Record<string, string> {
   const out: Record<string, string> = {};
   for (const name of HEADER_ALLOWLIST) {
@@ -134,57 +86,58 @@ function allowlistHeaders(headers: Headers): Record<string, string> {
   return out;
 }
 
-/** MCP HTTP responses may be SSE (data: lines) or plain JSON. */
-function parseFrame(body: string, contentType: string): unknown {
-  if (contentType.includes("text/event-stream") || body.startsWith("event:") || body.startsWith("data:")) {
-    let frame: unknown = null;
-    for (const line of body.split("\n")) {
-      if (line.startsWith("data:")) frame = JSON.parse(line.slice(5).trim());
-    }
-    return frame;
-  }
-  return body.trim() ? JSON.parse(body) : null;
-}
-
 async function forward(
   profile: ResolvedProfile,
   authorization: string | undefined,
   frame: Record<string, unknown>,
   mcpSessionId?: string,
-) {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json, text/event-stream",
-  };
-  if (authorization) headers.Authorization = authorization;
-  if (mcpSessionId) headers["Mcp-Session-Id"] = mcpSessionId;
+  protocolVersion?: string,
+): Promise<{
+  httpStatus: number;
+  headers: Record<string, string>;
+  sse: boolean;
+  responseFrame: unknown;
+  ordered: ClassifiedFrame[];
+  latencyMs: number;
+}> {
   const t0 = performance.now();
   const resp = await undiciFetch(profile.transport.url, {
     method: "POST",
-    headers,
+    headers: buildForwardHeaders(authorization, mcpSessionId, protocolVersion),
     body: JSON.stringify(frame),
     dispatcher: dispatcherFor(profile),
   });
   const body = await resp.text();
   const latencyMs = Math.round(performance.now() - t0);
   const respHeaders = new Headers(resp.headers as unknown as HeadersInit);
-  const sse = (respHeaders.get("content-type") ?? "").includes("text/event-stream");
+  const contentType = respHeaders.get("content-type") ?? "";
+  const frames = parseMcpBody(body, contentType);
+  const { response, ordered } = classifyFrames(frames, String(frame.id ?? ""));
   return {
     httpStatus: resp.status,
     headers: allowlistHeaders(respHeaders),
-    sse,
-    responseFrame: parseFrame(body, respHeaders.get("content-type") ?? ""),
+    sse: contentType.includes("text/event-stream"),
+    responseFrame: response,
+    ordered,
     latencyMs,
   };
 }
 
 export async function POST(request: Request) {
-  const { profileId, persona: personaKey, op, mcpSessionId, requestId } = (await request.json()) as {
+  const {
+    profileId,
+    persona: personaKey,
+    op,
+    mcpSessionId,
+    requestId,
+    protocolVersion,
+  } = (await request.json()) as {
     profileId: string;
     persona: string;
     op: Op;
     mcpSessionId?: string;
     requestId?: string;
+    protocolVersion?: string;
   };
 
   const profile = getProfileById(profileId);
@@ -217,17 +170,31 @@ export async function POST(request: Request) {
       requestId ?? `r-${crypto.randomUUID().slice(0, 8)}`,
       profile.protocolVersion,
     );
-    const result = await forward(profile, authorization, requestFrame, mcpSessionId);
+    // initialize carries the version in its body; later calls carry the
+    // CLIENT-held negotiated version as a header.
+    const result = await forward(
+      profile,
+      authorization,
+      requestFrame,
+      mcpSessionId,
+      op.kind === "initialize" ? undefined : protocolVersion,
+    );
 
     let newMcpSessionId: string | undefined;
+    let initializedFrame: Record<string, unknown> | undefined;
+    let negotiatedProtocolVersion: string | undefined;
     if (op.kind === "initialize") {
       newMcpSessionId = result.headers["mcp-session-id"];
-      // Complete the handshake; fire-and-forget notification frame.
+      // The follow-up fires before the client sees the initialize result,
+      // so the route derives the negotiated version itself.
+      negotiatedProtocolVersion = negotiatedVersion(result.responseFrame, profile.protocolVersion);
+      initializedFrame = { jsonrpc: "2.0", method: "notifications/initialized" };
       await forward(
         profile,
         authorization,
-        { jsonrpc: "2.0", method: "notifications/initialized" },
+        initializedFrame,
         newMcpSessionId,
+        negotiatedProtocolVersion,
       );
     }
 
@@ -236,6 +203,8 @@ export async function POST(request: Request) {
       ...result,
       requestFrame,
       mcpSessionId: newMcpSessionId,
+      negotiatedProtocolVersion,
+      initializedFrame,
       token: tokenInfo,
     });
   } catch (err) {

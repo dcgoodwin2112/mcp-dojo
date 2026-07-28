@@ -47,7 +47,9 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
 | `src/lib/profiles.ts` | server-only profile registry (loads profiles.config.json) |
 | `src/lib/profile-config.ts` | pure profile-config parsing: zod schema, ${ENV} interpolation, secret rules |
 | `src/lib/proxy-auth.ts` | pure auth dispatch (none / bearer / oauth) for the proxy |
-| `src/app/api/mcp/route.ts` | auth dispatch + OAuth mint/cache + JSON-RPC forward + SSE parse; per-profile TLS via undici dispatcher |
+| `src/app/api/mcp/route.ts` | auth dispatch + OAuth mint/cache + JSON-RPC forward; per-profile TLS via undici dispatcher |
+| `src/lib/sse.ts` | pure SSE body parsing + frame classification (every frame kept, wire order) |
+| `src/lib/mcp-frames.ts` | pure JSON-RPC frame/header builders (progressToken, MCP-Protocol-Version) |
 | `src/app/api/agent/route.ts` | one Anthropic call per request (loop is client-side) |
 | `src/components/LiveView.tsx` | split layout, wiring, drawers |
 | `src/components/ContextInspector.tsx` | live context view + edits |
@@ -71,7 +73,11 @@ History/decisions: [mcp-inspector-handoff-plan.md](mcp-inspector-handoff-plan.md
   tools, write token 38; permission denial = HTTP 403 + JSON-RPC `-32002`
   (never an `isError` tool result); responses are SSE `data:` lines; session
   via `Mcp-Session-Id` header; access tokens live 300s (proxy re-mints at a
-  30s margin); `initialize` returns an `instructions` string; completion
+  30s margin); `initialize` returns an `instructions` string; the proxy
+  sends `MCP-Protocol-Version` (server-negotiated) on post-initialize
+  requests and `_meta.progressToken` on tools/call — response bodies may
+  carry several SSE frames (progress/log notifications interleaved with
+  the response); all are kept and logged in wire order; completion
   covers prompt args and the dataset/dictionary resource templates
   (ref/resource on `{id}`, 13 UUIDs on empty input) — distribution and
   datastore-schema templates have no completers (empty result, not an error). DKAN site + consumers setup: plan's provisioning checklist.
