@@ -236,23 +236,6 @@ export function AgentChat({
             autoComplete="off"
             className="w-full rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900 placeholder:text-zinc-500 dark:placeholder:text-zinc-400"
           />
-          {slash && slash.rest !== null && !pending && (
-            <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-              {!activePrompt ? (
-                <>unknown prompt “{slash.name}”</>
-              ) : argState?.requiredFilled ? (
-                <>all arguments set — Enter to preview</>
-              ) : argState?.currentArg ? (
-                <>
-                  <span className="font-mono">
-                    {argState.currentArg.name}
-                    {argState.currentArg.required ? "*" : ""}
-                  </span>
-                  {argState.currentArg.description && <> — {argState.currentArg.description}</>}
-                </>
-              ) : null}
-            </p>
-          )}
           {(cmdMatches.length > 0 || valueSuggest.length > 0) && !pending && (
             <ul className="absolute left-0 top-full z-20 mt-0.5 w-full overflow-hidden rounded-md border border-amber-300 bg-white shadow-lg dark:border-amber-800 dark:bg-zinc-900">
               {cmdMatches.length > 0
@@ -322,6 +305,23 @@ export function AgentChat({
           </button>
         )}
       </form>
+      {slash && slash.rest !== null && !pending && (
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          {!activePrompt ? (
+            <>unknown prompt “{slash.name}”</>
+          ) : argState?.requiredFilled ? (
+            <>all arguments set — Enter to preview</>
+          ) : argState?.currentArg ? (
+            <>
+              <span className="font-mono">
+                {argState.currentArg.name}
+                {argState.currentArg.required ? "*" : ""}
+              </span>
+              {argState.currentArg.description && <> — {argState.currentArg.description}</>}
+            </>
+          ) : null}
+        </p>
+      )}
     </div>
   );
 }
