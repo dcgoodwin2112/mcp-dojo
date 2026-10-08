@@ -47,32 +47,59 @@ export interface ArgState {
   requiredFilled: boolean;
 }
 
-/** Parse the text after the command: positional or key=value tokens. */
+/**
+ * Parse the text after the command: positional or key=value tokens. Each
+ * positional token fills the first unfilled argument; when that argument is
+ * the last one defined, it is greedy and takes the remainder of the text
+ * verbatim, so free-text values (a question, a topic) need no quoting.
+ * key=value is honored only for known argument names — an "=" inside
+ * free text stays literal.
+ */
 export function computeArgState(rest: string, argDefs: PromptArg[]): ArgState {
-  const tokens = rest.trim() === "" ? [] : rest.trim().split(/\s+/);
-  const typingNew = rest === "" || /\s$/.test(rest);
   const map: Record<string, string> = {};
-  let positional = 0;
-  for (const tok of tokens) {
+  const names = new Set(argDefs.map((a) => a.name));
+  const lastDef: PromptArg | undefined = argDefs[argDefs.length - 1];
+  let tail: string | null = null;
+  let lastAssigned: { def?: PromptArg; value: string } | null = null;
+  const tokenRe = /\S+/g;
+  let m: RegExpExecArray | null;
+  while ((m = tokenRe.exec(rest))) {
+    const tok = m[0];
     const eq = tok.indexOf("=");
-    if (eq > 0) {
-      map[tok.slice(0, eq)] = tok.slice(eq + 1);
-    } else {
-      const def = argDefs[positional];
-      if (def) map[def.name] = tok;
-      positional += 1;
+    const key = eq > 0 ? tok.slice(0, eq) : "";
+    if (key && names.has(key)) {
+      map[key] = tok.slice(eq + 1);
+      lastAssigned = {
+        def: argDefs.find((a) => a.name === key),
+        value: tok.slice(eq + 1),
+      };
+      continue;
     }
+    const def = argDefs.find((a) => !(a.name in map));
+    if (!def) {
+      lastAssigned = { def: undefined, value: tok };
+      continue;
+    }
+    if (def === lastDef) {
+      tail = rest.slice(m.index);
+      map[def.name] = tail.trim();
+      lastAssigned = { def, value: map[def.name] };
+      break;
+    }
+    map[def.name] = tok;
+    lastAssigned = { def, value: tok };
   }
-  const currentToken = typingNew ? "" : (tokens[tokens.length - 1] ?? "");
+  const typingNew = rest === "" || /\s$/.test(rest);
   let currentArg: PromptArg | undefined;
-  let currentValue = currentToken;
-  const eq = currentToken.indexOf("=");
-  if (eq > 0) {
-    currentArg = argDefs.find((a) => a.name === currentToken.slice(0, eq));
-    currentValue = currentToken.slice(eq + 1);
-  } else {
-    const idx = typingNew ? tokens.length : tokens.length - 1;
-    currentArg = argDefs[Math.max(0, Math.min(idx, argDefs.length - 1))];
+  let currentValue = "";
+  if (tail !== null) {
+    currentArg = lastDef;
+    currentValue = tail.trim();
+  } else if (typingNew) {
+    currentArg = argDefs.find((a) => !(a.name in map)) ?? lastDef;
+  } else if (lastAssigned) {
+    currentArg = lastAssigned.def;
+    currentValue = lastAssigned.value;
   }
   const requiredFilled = argDefs
     .filter((a) => a.required)

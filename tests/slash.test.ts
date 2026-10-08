@@ -93,6 +93,45 @@ describe("computeArgState", () => {
     expect(s.currentArg).toBeUndefined();
     expect(s.requiredFilled).toBe(true);
   });
+
+  describe("greedy last argument (free-text values)", () => {
+    const qArgs: PromptArg[] = [
+      { name: "dataset_id", required: true },
+      { name: "question", required: true },
+    ];
+
+    it("gives the last argument the remainder, spaces included", () => {
+      const s = computeArgState("abc which parks had the most sightings", qArgs);
+      expect(s.map).toEqual({
+        dataset_id: "abc",
+        question: "which parks had the most sightings",
+      });
+      expect(s.requiredFilled).toBe(true);
+    });
+
+    it("keeps targeting the last argument as more words are typed", () => {
+      const s = computeArgState("abc which parks ", qArgs);
+      expect(s.currentArg?.name).toBe("question");
+      expect(s.currentValue).toBe("which parks");
+    });
+
+    it("takes the whole rest for a single free-text argument", () => {
+      const s = computeArgState("bike lanes", [{ name: "topic", required: true }]);
+      expect(s.map).toEqual({ topic: "bike lanes" });
+      expect(s.currentArg?.name).toBe("topic");
+      expect(s.currentValue).toBe("bike lanes");
+    });
+
+    it("fills the greedy tail after an earlier key=value token", () => {
+      const s = computeArgState("dataset_id=abc which parks are best", qArgs);
+      expect(s.map).toEqual({ dataset_id: "abc", question: "which parks are best" });
+    });
+
+    it("keeps an = inside free text literal", () => {
+      const s = computeArgState("abc is weight=100 common", qArgs);
+      expect(s.map.question).toBe("is weight=100 common");
+    });
+  });
 });
 
 describe("acceptValueText", () => {
