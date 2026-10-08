@@ -60,7 +60,7 @@ a single long-lived Node process. Example — DKAN over drush:
   "transport": {
     "kind": "stdio",
     "command": "ddev",
-    "args": ["drush", "dkan-mcp-server:serve"],
+    "args": ["drush", "mcp:server", "0"],
     "cwd": "/path/to/dkan-site"
   },
   "auth": { "type": "none" }
