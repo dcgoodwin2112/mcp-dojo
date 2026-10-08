@@ -211,7 +211,7 @@ describe("publicProfiles", () => {
           transport: {
             kind: "stdio",
             command: "/usr/local/bin/ddev",
-            args: ["drush", "dkan-mcp-server:serve", "--user=mcp_writer"],
+            args: ["drush", "mcp:server", "mcp_writer"],
             cwd: "/sites/dkan",
             env: { MY_FLAG: "on" },
             secretEnv: { CHILD_KEY: "${RO_SECRET}" },
@@ -223,7 +223,7 @@ describe("publicProfiles", () => {
     expect(pub.mcpUrl).toBe("stdio: ddev");
     expect(pub.transport).toBe("stdio");
     const json = JSON.stringify(pub);
-    expect(json).not.toContain("dkan-mcp-server:serve");
+    expect(json).not.toContain("mcp:server");
     expect(json).not.toContain("mcp_writer");
     expect(json).not.toContain("MY_FLAG");
     expect(json).not.toContain(ENV.RO_SECRET);
