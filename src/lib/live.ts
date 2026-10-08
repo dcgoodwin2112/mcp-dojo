@@ -51,7 +51,8 @@ const LIST_PRIMITIVE: Record<ListKind, Primitive> = {
 const RESOURCE_TEXT_CAP = 2000;
 
 export const AGENT_SYSTEM_SUMMARY =
-  "You are a DKAN open-data assistant. Use the MCP tools to answer questions about the catalog.";
+  "You are a DKAN open-data assistant. Use the MCP tools to answer questions about the catalog. " +
+  "Cite only URLs that appear in tool results — never construct or guess links.";
 
 function rpcResult(frame: unknown): Record<string, unknown> | undefined {
   if (frame && typeof frame === "object" && "result" in frame) {
